@@ -1,5 +1,5 @@
 # Octomind Calender
-A calender and task scheduling application that can automatically schedule your tasks throughout the week. You can schedule events just like any other calender application, but you can also add task! Simply by adding a Task and writing a short description, the estimate time to complete this task is calculate and automated scheduled into your calender. 
+A calender and task scheduling application that can automatically schedule your tasks throughout the week. You can schedule events just like any other calender application, but you can also add tasks! Simply by adding a Task and writing a short description, the estimate time to complete this task is calculate and automated scheduled into your calender. 
 
 Task completition time estimation built with Llama2. Front end built with React, TypeScript, and ShadCN UI components. 
 
