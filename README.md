@@ -1,5 +1,7 @@
 # Octomind Calender
-A calender and task scheduling application that can automatically schedule your tasks throughout the week. Built with React, TypeScript, and ShadCN UI components.
+A calender and task scheduling application that can automatically schedule your tasks throughout the week. You can schedule events just like any other calender application, but you can also add task! Simply by adding a Task and writing a short description, the estimate time to complete this task is calculate and automated scheduled into your calender. 
+
+Task completition time estimation built with Llama2. Front end built with React, TypeScript, and ShadCN UI components. 
 
 <img width="1790" height="977" alt="Octomind Calender Image" src="./screenshots/Screenshot 2026-02-11 at 3.36.55 AM.png" />
 
