@@ -6,6 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
+    "test": "node --experimental-strip-types --test src/modules/task-estimate/estimator.test.ts src/app/api/task-estimate/route.test.ts src/modules/components/calendar/scheduling.test.ts src/modules/components/calendar/scheduling.test.mjs",
     "lint": "next lint",
     "registry:build": "shadcn build",
     "postinstall": "fumadocs-mdx"

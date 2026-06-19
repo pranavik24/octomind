@@ -1,4 +1,8 @@
 import type { TEventColor } from "@/modules/components/calendar/types";
+import type {
+	ScheduledBlock,
+	TaskScheduleStatus,
+} from "@/modules/components/calendar/scheduling";
 
 export interface IUser {
 	id: string;
@@ -8,6 +12,7 @@ export interface IUser {
 
 export interface IEvent {
 	id: number;
+	taskId?: number;
 	startDate: string;
 	endDate: string;
 	title: string;
@@ -33,6 +38,8 @@ export interface ITask {
 	id: number;
 	dueDate: string;
 	estimatedHours?: number;
+	scheduledBlocks?: ScheduledBlock[];
+	scheduleStatus?: TaskScheduleStatus;
 	title: string;
 	color: TEventColor;
 	description: string;

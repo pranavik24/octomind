@@ -1,8 +1,17 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { addMinutes, format, set } from "date-fns";
-import { type ReactNode, useEffect, useMemo } from "react";
-import { useForm } from "react-hook-form";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type UseFormReturn, useForm } from "react-hook-form";
 import { toast } from "sonner";
+import {
+	AlertDialog,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import {
@@ -44,11 +53,8 @@ import {
 	eventSchema,
 	type TEventFormData,
 } from "@/modules/components/calendar/schemas";
-import { useState } from "react";
-import { Modal as SimpleModal, ModalContent as SimpleModalContent, ModalHeader as SimpleModalHeader, ModalTitle as SimpleModalTitle, ModalFooter as SimpleModalFooter } from "@/components/ui/responsive-modal";
-import { Toggle } from "@/components/ui/toggle";
+import { TaskSchedulingError } from "@/modules/components/calendar/scheduling";
 import { Label } from "@/components/ui/label";
-import { differenceInDays } from "date-fns";
 import { EventBullet } from "@/modules/components/calendar/views/month-view/event-bullet";
 
 interface IProps {
@@ -57,6 +63,36 @@ interface IProps {
 	startTime?: { hour: number; minute: number };
 	event?: IEvent;
 	task?: ITask;
+}
+
+interface TaskEstimateResponse {
+	estimatedHours: number;
+	estimatedMinutes: number;
+	confidence: "low" | "medium" | "high";
+	reason: string;
+	source: "gemini" | "openai" | "ollama" | "local";
+	model: string;
+}
+
+type EventFormValues = TEventFormData & {
+	location: string;
+	recurrenceInterval?: number;
+	recurrenceWeekdays?: number[];
+	recurrenceEndType?: "never" | "on" | "after";
+	recurrenceUntil?: string;
+};
+
+type TaskFormValues = {
+	title: string;
+	description: string;
+	dueDate: Date;
+	estimatedHours?: number;
+	color: ITask["color"];
+};
+
+interface PendingTaskConflict {
+	error: TaskSchedulingError;
+	task: ITask;
 }
 
 export function AddEditEventDialog({
@@ -92,7 +128,7 @@ export function AddEditEventDialog({
 		};
 	}, [startDate, startTime, event, isEditing]);
 
-	const form = useForm<any>({
+	const form = useForm<EventFormValues>({
 			resolver: zodResolver(eventSchema),
 		defaultValues: {
 			title: event?.title ?? "",
@@ -123,7 +159,7 @@ export function AddEditEventDialog({
 	    // an invalid sentinel value into the form (zod disallows "custom").
 	    const [openCustom, setOpenCustom] = useState(false);
 
-	const onSubmit = (values: any) => {
+	const onSubmit = (values: EventFormValues) => {
 		try {
 			const formattedEvent: IEvent = {
 				...values,
@@ -291,7 +327,7 @@ export function AddEditEventDialog({
 												<SelectValue placeholder="Doesn't repeat" />
 											</SelectTrigger>
 											<SelectContent>
-												<SelectItem value="none">Doesn't repeat</SelectItem>
+												<SelectItem value="none">Doesn&apos;t repeat</SelectItem>
 												<SelectItem value="daily">Daily</SelectItem>
 												<SelectItem value="weekly">Weekly</SelectItem>
 												<SelectItem value="monthly">Monthly</SelectItem>
@@ -369,7 +405,13 @@ export function AddEditEventDialog({
 	);
 }
 
-function CustomRecurrenceModal({ form, onClose }: { form: any; onClose: () => void }) {
+function CustomRecurrenceModal({
+	form,
+	onClose,
+}: {
+	form: UseFormReturn<EventFormValues>;
+	onClose: () => void;
+}) {
 	const [open, setOpen] = useState(true);
 
 	// local mirror values
@@ -377,13 +419,15 @@ function CustomRecurrenceModal({ form, onClose }: { form: any; onClose: () => vo
 	const interval = form.getValues("recurrenceInterval") ?? 1;
 	const weekdays: number[] = form.getValues("recurrenceWeekdays") ?? [new Date().getDay()];
 	const endType = form.getValues("recurrenceEndType") ?? "never"; // 'never' | 'on' | 'after'
-	const until = form.getValues("recurrenceUntil") ? new Date(form.getValues("recurrenceUntil")) : undefined;
+	const recurrenceUntil = form.getValues("recurrenceUntil");
+	const until = recurrenceUntil ? new Date(recurrenceUntil) : undefined;
 	const count = form.getValues("recurrenceCount") ?? 1;
 
 	const [localFreq, setLocalFreq] = useState<string>(freq);
 	const [localInterval, setLocalInterval] = useState<number>(interval);
 	const [localWeekdays, setLocalWeekdays] = useState<number[]>(weekdays);
-	const [localEndType, setLocalEndType] = useState<string>(endType);
+	const [localEndType, setLocalEndType] =
+		useState<"never" | "on" | "after">(endType);
 	const [localUntil, setLocalUntil] = useState<Date | undefined>(until);
 	const [localCount, setLocalCount] = useState<number>(count);
 
@@ -535,7 +579,7 @@ export function AddEditTaskDialog({
 	// Use a flexible form type for tasks to avoid mismatched defaultValues shape
 	// NOTE: We intentionally do NOT use `eventSchema` for tasks because the
 	// event schema expects `startDate`/`endDate` while tasks use `dueDate`.
-	const form = useForm<any>({
+	const form = useForm<TaskFormValues>({
 		defaultValues: {
 			title: task?.title ?? "",
 			description: task?.description ?? "",
@@ -550,11 +594,21 @@ export function AddEditTaskDialog({
 	const watchedTitle = form.watch("title");
 	const watchedDescription = form.watch("description");
 	const watchedDueDate = form.watch("dueDate");
+	const watchedColor = form.watch("color");
 	const autoEstimatedHours = useMemo(
 		() => estimateTaskDurationHours(watchedTitle ?? "", watchedDescription ?? ""),
 		[watchedTitle, watchedDescription],
 	);
 	const [useAutoEstimate, setUseAutoEstimate] = useState(!task?.estimatedHours);
+	const [estimateRefreshKey, setEstimateRefreshKey] = useState(0);
+	const [isLlmEstimating, setIsLlmEstimating] = useState(false);
+	const [estimateDetails, setEstimateDetails] =
+		useState<TaskEstimateResponse | null>(null);
+	const estimateLabel =
+		estimateDetails?.source === "local" ? "Local estimate" : "AI estimate";
+	const estimateRequestId = useRef(0);
+	const [pendingTaskConflict, setPendingTaskConflict] =
+		useState<PendingTaskConflict | null>(null);
 	const [isEod, setIsEod] = useState(() => {
 		const due = task ? new Date(task.dueDate) : initialDates.dueDate;
 		return due.getHours() === 23 && due.getMinutes() === 59;
@@ -581,6 +635,92 @@ export function AddEditTaskDialog({
 	}, [autoEstimatedHours, form, useAutoEstimate]);
 
 	useEffect(() => {
+		if (!useAutoEstimate) return;
+
+		const title = (watchedTitle ?? "").trim();
+		const description = (watchedDescription ?? "").trim();
+
+		if (!title && !description) {
+			setEstimateDetails(null);
+			setIsLlmEstimating(false);
+			return;
+		}
+
+		const requestId = estimateRequestId.current + 1;
+		estimateRequestId.current = requestId;
+		const controller = new AbortController();
+
+		const timeout = window.setTimeout(async () => {
+			setIsLlmEstimating(true);
+
+			try {
+				const response = await fetch("/api/task-estimate", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					signal: controller.signal,
+					body: JSON.stringify({
+						title,
+						description,
+						category: watchedColor ?? "Other",
+						dueDate: watchedDueDate
+							? new Date(watchedDueDate).toISOString()
+							: undefined,
+					}),
+				});
+
+				if (!response.ok) {
+					throw new Error(`Estimate request failed: ${response.status}`);
+				}
+
+				const estimate = (await response.json()) as TaskEstimateResponse;
+				if (estimateRequestId.current !== requestId) return;
+
+				form.setValue(
+					"estimatedHours",
+					normalizeTaskDurationHours(estimate.estimatedHours),
+					{ shouldDirty: false },
+				);
+				setEstimateDetails(estimate);
+			} catch (error) {
+				if (controller.signal.aborted || estimateRequestId.current !== requestId) {
+					return;
+				}
+
+				form.setValue("estimatedHours", autoEstimatedHours, {
+					shouldDirty: false,
+				});
+				setEstimateDetails({
+					estimatedHours: autoEstimatedHours,
+					estimatedMinutes: autoEstimatedHours * 60,
+					confidence: "low",
+					reason: "Local estimate used because the background estimate failed.",
+					source: "local",
+					model: "local",
+				});
+				console.warn("Task estimate failed:", error);
+			} finally {
+				if (estimateRequestId.current === requestId) {
+					setIsLlmEstimating(false);
+				}
+			}
+		}, 700);
+
+		return () => {
+			window.clearTimeout(timeout);
+			controller.abort();
+		};
+	}, [
+		autoEstimatedHours,
+		estimateRefreshKey,
+		form,
+		useAutoEstimate,
+		watchedDescription,
+		watchedColor,
+		watchedDueDate,
+		watchedTitle,
+	]);
+
+	useEffect(() => {
 		if (!isEod || !watchedDueDate) return;
 		const dueDate = new Date(watchedDueDate);
 		if (dueDate.getHours() === 23 && dueDate.getMinutes() === 59) return;
@@ -591,48 +731,68 @@ export function AddEditTaskDialog({
 		);
 	}, [isEod, watchedDueDate, form]);
 
-	const onSubmit = (values: any) => {
-		try {
-			const estimatedHours = normalizeTaskDurationHours(
-				values.estimatedHours ??
-					estimateTaskDurationHours(values.title ?? "", values.description ?? ""),
-			);
-			const formattedTask: ITask = {
-				...values,
-				dueDate: format(values.dueDate, "yyyy-MM-dd'T'HH:mm:ss"),
-				estimatedHours,
-				id: isEditing ? task.id : Math.floor(Math.random() * 1000000),
-				user: isEditing
-					? task.user
-					: {
-							id: Math.floor(Math.random() * 1000000).toString(),
-							name: "Jeraidi Yassir",
-							picturePath: null,
-						},
-				color: values.color,
-			};
+	const buildTaskFromValues = (values: TaskFormValues): ITask => {
+		const estimatedHours = normalizeTaskDurationHours(
+			values.estimatedHours ??
+				estimateTaskDurationHours(values.title ?? "", values.description ?? ""),
+		);
 
-			if (isEditing) {
-				updateTask(formattedTask);
-				toast.success("Task updated successfully");
-			} else {
-				console.log("Task created successfully");
-				addTask(formattedTask);
-				toast.success("Task created successfully");
+		return {
+			...values,
+			dueDate: format(values.dueDate, "yyyy-MM-dd'T'HH:mm:ss"),
+			estimatedHours,
+			id: isEditing ? task.id : Math.floor(Math.random() * 1000000),
+			user: isEditing
+				? task.user
+				: {
+						id: Math.floor(Math.random() * 1000000).toString(),
+						name: "Jeraidi Yassir",
+						picturePath: null,
+					},
+			color: values.color,
+		};
+	};
+
+	const saveTask = (formattedTask: ITask) => {
+		if (isEditing) {
+			updateTask(formattedTask);
+			toast.success("Task updated successfully");
+		} else {
+			addTask(formattedTask);
+			toast.success("Task created successfully");
+		}
+	};
+
+	const closeAfterTaskSave = () => {
+		onClose();
+		form.reset();
+		setPendingTaskConflict(null);
+	};
+
+	const onSubmit = (values: TaskFormValues) => {
+		try {
+			const formattedTask = buildTaskFromValues(values);
+			saveTask(formattedTask);
+			closeAfterTaskSave();
+		} catch (error) {
+			if (error instanceof TaskSchedulingError) {
+				setPendingTaskConflict({
+					error,
+					task: buildTaskFromValues(values),
+				});
+				return;
 			}
 
-			onClose();
-			form.reset();
-		} catch (error) {
 			console.error(`Error ${isEditing ? "editing" : "adding"} task:`, error);
 			toast.error(`Failed to ${isEditing ? "edit" : "add"} task`);
 		}
 	};
 
 	return (
-		<Modal open={isOpen} onOpenChange={onToggle} modal={false}>
-			<ModalTrigger asChild>{children}</ModalTrigger>
-			<ModalContent>
+		<>
+			<Modal open={isOpen} onOpenChange={onToggle} modal={false}>
+				<ModalTrigger asChild>{children}</ModalTrigger>
+				<ModalContent>
 				<ModalHeader>
 					<ModalTitle>{isEditing ? "Edit Task" : "Add New Task"}</ModalTitle>
 					<ModalDescription>
@@ -726,17 +886,21 @@ export function AddEditTaskDialog({
 												<Button
 													type="button"
 													variant="outline"
+													disabled={isLlmEstimating}
 													onClick={() => {
 														setUseAutoEstimate(true);
 														field.onChange(autoEstimatedHours);
+														setEstimateRefreshKey((key) => key + 1);
 													}}
 												>
-													Auto Estimate
+													{isLlmEstimating ? "Estimating..." : "Auto Estimate"}
 												</Button>
 											</div>
 										</FormControl>
 										<p className="text-xs text-muted-foreground">
-											Based on task title and description. Range: 0.5h to 8h.
+											{estimateDetails
+												? `${estimateLabel}: ${estimateDetails.reason}`
+												: "Based on task title and description. Range: 0.5h to 8h."}
 										</p>
 										<FormMessage />
 									</FormItem>
@@ -803,7 +967,33 @@ export function AddEditTaskDialog({
 						{isEditing ? "Save Changes" : "Create Task"}
 					</Button>
 				</ModalFooter>
-			</ModalContent>
-		</Modal>
+				</ModalContent>
+			</Modal>
+			<AlertDialog
+				open={!!pendingTaskConflict}
+				onOpenChange={(open) => {
+					if (!open) setPendingTaskConflict(null);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Not enough time before the due date</AlertDialogTitle>
+						<AlertDialogDescription>
+							This task is estimated to take{" "}
+							{pendingTaskConflict?.task.estimatedHours ?? 0} hours, but there
+							is not enough available time to schedule it before{" "}
+							{pendingTaskConflict
+								? format(new Date(pendingTaskConflict.task.dueDate), "MMM d, h:mm a")
+								: "the due date"}
+							. Adjust the due date, reduce the estimate, or free up time before
+							the due date before creating this task.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Keep editing</AlertDialogCancel>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+		</>
 	);
 }
