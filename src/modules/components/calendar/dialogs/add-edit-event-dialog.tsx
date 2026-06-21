@@ -23,6 +23,7 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
 	Modal,
 	ModalClose,
@@ -43,18 +44,23 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { COLORS } from "@/modules/components/calendar/constants";
 import { useCalendar } from "@/modules/components/calendar/contexts/calendar-context";
-import { useDisclosure } from "@/modules/components/calendar/hooks";
 import {
 	estimateTaskDurationHours,
 	normalizeTaskDurationHours,
 } from "@/modules/components/calendar/helpers";
+import { useDisclosure } from "@/modules/components/calendar/hooks";
 import type { IEvent, ITask } from "@/modules/components/calendar/interfaces";
+import {
+	defaultRecurrenceCount,
+	type RecurrencePreset,
+	recurrenceForPreset,
+	recurrenceOptionsForDate,
+} from "@/modules/components/calendar/recurrence";
+import { TaskSchedulingError } from "@/modules/components/calendar/scheduling";
 import {
 	eventSchema,
 	type TEventFormData,
 } from "@/modules/components/calendar/schemas";
-import { TaskSchedulingError } from "@/modules/components/calendar/scheduling";
-import { Label } from "@/components/ui/label";
 import { EventBullet } from "@/modules/components/calendar/views/month-view/event-bullet";
 
 interface IProps {
@@ -74,13 +80,7 @@ interface TaskEstimateResponse {
 	model: string;
 }
 
-type EventFormValues = TEventFormData & {
-	location: string;
-	recurrenceInterval?: number;
-	recurrenceWeekdays?: number[];
-	recurrenceEndType?: "never" | "on" | "after";
-	recurrenceUntil?: string;
-};
+type EventFormValues = TEventFormData & { location: string };
 
 type TaskFormValues = {
 	title: string;
@@ -104,6 +104,12 @@ export function AddEditEventDialog({
 	const { isOpen, onClose, onToggle } = useDisclosure();
 	const { addEvent, updateEvent } = useCalendar();
 	const isEditing = !!event;
+	const initialPreset: RecurrencePreset = event?.recurrence
+		? event.recurrence.freq === "weekly" &&
+			event.recurrence.byweekday?.join(",") === "1,2,3,4,5"
+			? "weekdays"
+			: event.recurrence.freq
+		: "none";
 
 	const initialDates = useMemo(() => {
 		if (!isEditing && !event) {
@@ -129,7 +135,7 @@ export function AddEditEventDialog({
 	}, [startDate, startTime, event, isEditing]);
 
 	const form = useForm<EventFormValues>({
-			resolver: zodResolver(eventSchema),
+		resolver: zodResolver(eventSchema),
 		defaultValues: {
 			title: event?.title ?? "",
 			location: event?.location ?? "",
@@ -137,8 +143,13 @@ export function AddEditEventDialog({
 			startDate: initialDates.startDate,
 			endDate: initialDates.endDate,
 			color: event?.color ?? "Other",
+			recurrencePreset: initialPreset,
 			recurrenceFreq: event?.recurrence?.freq ?? "none",
 			recurrenceCount: event?.recurrence?.count ?? undefined,
+			recurrenceInterval: event?.recurrence?.interval ?? 1,
+			recurrenceWeekdays: event?.recurrence?.byweekday,
+			recurrenceUntil: event?.recurrence?.until,
+			recurrenceBySetPos: event?.recurrence?.bysetpos,
 		},
 	});
 
@@ -150,22 +161,27 @@ export function AddEditEventDialog({
 			startDate: initialDates.startDate,
 			endDate: initialDates.endDate,
 			color: event?.color ?? "Other",
+			recurrencePreset: initialPreset,
 			recurrenceFreq: event?.recurrence?.freq ?? "none",
 			recurrenceCount: event?.recurrence?.count ?? undefined,
+			recurrenceInterval: event?.recurrence?.interval ?? 1,
+			recurrenceWeekdays: event?.recurrence?.byweekday,
+			recurrenceUntil: event?.recurrence?.until,
+			recurrenceBySetPos: event?.recurrence?.bysetpos,
 		});
-	}, [event, initialDates, form]);
+	}, [event, initialDates, form, initialPreset]);
 
-	    // local UI state to open the custom recurrence modal without writing
-	    // an invalid sentinel value into the form (zod disallows "custom").
-	    const [openCustom, setOpenCustom] = useState(false);
+	// local UI state to open the custom recurrence modal without writing
+	// an invalid sentinel value into the form (zod disallows "custom").
+	const [openCustom, setOpenCustom] = useState(false);
 
-	const onSubmit = (values: EventFormValues) => {
+	const onSubmit = async (values: EventFormValues) => {
 		try {
 			const formattedEvent: IEvent = {
 				...values,
 				startDate: format(values.startDate, "yyyy-MM-dd'T'HH:mm:ss"),
 				endDate: format(values.endDate, "yyyy-MM-dd'T'HH:mm:ss"),
-				id: isEditing ? event.id : Math.floor(Math.random() * 1000000),
+				id: isEditing ? event.id : crypto.randomUUID(),
 				user: isEditing
 					? event.user
 					: {
@@ -176,25 +192,48 @@ export function AddEditEventDialog({
 				color: values.color,
 			};
 
-			// Attach recurrence object if the form provided one
-			if (values.recurrenceFreq && values.recurrenceFreq !== "none") {
+			const presetRule = recurrenceForPreset(
+				values.recurrencePreset ?? "none",
+				values.startDate,
+			);
+			if (presetRule) {
+				formattedEvent.recurrence = presetRule;
+			} else if (
+				values.recurrencePreset === "custom" &&
+				values.recurrenceFreq &&
+				values.recurrenceFreq !== "none"
+			) {
+				const endType = values.recurrenceEndType ?? "never";
 				formattedEvent.recurrence = {
 					freq: values.recurrenceFreq as
 						| "daily"
 						| "weekly"
 						| "monthly"
 						| "yearly",
-					count: values.recurrenceCount ?? 1,
+					count:
+						endType === "on"
+							? undefined
+							: endType === "after"
+								? (values.recurrenceCount ?? 1)
+								: defaultRecurrenceCount(
+										values.recurrenceFreq as
+											| "daily"
+											| "weekly"
+											| "monthly"
+											| "yearly",
+									),
 					interval: values.recurrenceInterval ?? 1,
 					byweekday: values.recurrenceWeekdays ?? undefined,
+					bysetpos: values.recurrenceBySetPos,
+					until: endType === "on" ? values.recurrenceUntil : undefined,
 				};
 			}
 
 			if (isEditing) {
-				updateEvent(formattedEvent);
+				await updateEvent(formattedEvent);
 				toast.success("Event updated successfully");
 			} else {
-				addEvent(formattedEvent);
+				await addEvent(formattedEvent);
 				toast.success("Event created successfully");
 			}
 
@@ -205,6 +244,11 @@ export function AddEditEventDialog({
 			toast.error(`Failed to ${isEditing ? "edit" : "add"} event`);
 		}
 	};
+	const selectedStartDate = form.watch("startDate");
+	const recurrenceOptions = useMemo(
+		() => recurrenceOptionsForDate(selectedStartDate),
+		[selectedStartDate],
+	);
 
 	return (
 		<Modal open={isOpen} onOpenChange={onToggle} modal={false}>
@@ -250,7 +294,9 @@ export function AddEditEventDialog({
 							name="location"
 							render={({ field, fieldState }) => (
 								<FormItem>
-									<FormLabel className="required" htmlFor="location">Location</FormLabel>
+									<FormLabel className="required" htmlFor="location">
+										Location
+									</FormLabel>
 									<FormControl>
 										<Input
 											id="location"
@@ -311,66 +357,44 @@ export function AddEditEventDialog({
 						{/* Recurrence: show a compact select and a custom popup */}
 						<FormField
 							control={form.control}
-							name="recurrenceFreq"
+							name="recurrencePreset"
 							render={({ field }) => (
 								<FormItem>
 									<FormLabel>Repeat</FormLabel>
 									<FormControl>
-										<Select value={field.value} onValueChange={(v) => {
-											if (v === "custom") {
-												setOpenCustom(true);
-											} else {
-												field.onChange(v);
-											}
-										}}>
+										<Select
+											value={field.value}
+											onValueChange={(value: RecurrencePreset) => {
+												field.onChange(value);
+												if (value === "custom") {
+													setOpenCustom(true);
+												}
+											}}
+										>
 											<SelectTrigger className="w-full">
-												<SelectValue placeholder="Doesn't repeat" />
+												<SelectValue placeholder="Does not repeat" />
 											</SelectTrigger>
 											<SelectContent>
-												<SelectItem value="none">Doesn&apos;t repeat</SelectItem>
-												<SelectItem value="daily">Daily</SelectItem>
-												<SelectItem value="weekly">Weekly</SelectItem>
-												<SelectItem value="monthly">Monthly</SelectItem>
-												<SelectItem value="yearly">Yearly</SelectItem>
-												<SelectItem value="custom">Custom...</SelectItem>
+												{recurrenceOptions.map((option) => (
+													<SelectItem key={option.value} value={option.value}>
+														{option.label}
+													</SelectItem>
+												))}
 											</SelectContent>
 										</Select>
 									</FormControl>
 									<FormMessage />
 								</FormItem>
 							)}
-							/>
-							{/* Occurrences quick field (shown when simple repeat chosen) */}
-							{form.watch("recurrenceFreq") && form.watch("recurrenceFreq") !== "none" && form.watch("recurrenceFreq") !== "custom" && (
-								<FormField
-									control={form.control}
-									name="recurrenceCount"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Occurrences</FormLabel>
-											<FormControl>
-												<Input
-													type="number"
-													min={1}
-													value={field.value ?? ''}
-													onChange={(e) => {
-														const v = e.target.value;
-														const n = Number(v);
-														field.onChange(v === '' || isNaN(n) ? undefined : n);
-													}}
-												/>
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-							)}
-
-							{/* Custom recurrence modal trigger: controlled by local state so we never write
+						/>
+						{/* Custom recurrence modal trigger: controlled by local state so we never write
 							   the literal "custom" into the form (zod validation disallows it). */}
-							{openCustom && (
-								<CustomRecurrenceModal form={form} onClose={() => setOpenCustom(false)} />
-							)}
+						{openCustom && (
+							<CustomRecurrenceModal
+								form={form}
+								onClose={() => setOpenCustom(false)}
+							/>
+						)}
 						<FormField
 							control={form.control}
 							name="description"
@@ -415,9 +439,12 @@ function CustomRecurrenceModal({
 	const [open, setOpen] = useState(true);
 
 	// local mirror values
-	const freq = form.getValues("recurrenceFreq") ?? "weekly";
+	const savedFreq = form.getValues("recurrenceFreq");
+	const freq = !savedFreq || savedFreq === "none" ? "weekly" : savedFreq;
 	const interval = form.getValues("recurrenceInterval") ?? 1;
-	const weekdays: number[] = form.getValues("recurrenceWeekdays") ?? [new Date().getDay()];
+	const weekdays: number[] = form.getValues("recurrenceWeekdays") ?? [
+		form.getValues("startDate").getDay(),
+	];
 	const endType = form.getValues("recurrenceEndType") ?? "never"; // 'never' | 'on' | 'after'
 	const recurrenceUntil = form.getValues("recurrenceUntil");
 	const until = recurrenceUntil ? new Date(recurrenceUntil) : undefined;
@@ -426,8 +453,9 @@ function CustomRecurrenceModal({
 	const [localFreq, setLocalFreq] = useState<string>(freq);
 	const [localInterval, setLocalInterval] = useState<number>(interval);
 	const [localWeekdays, setLocalWeekdays] = useState<number[]>(weekdays);
-	const [localEndType, setLocalEndType] =
-		useState<"never" | "on" | "after">(endType);
+	const [localEndType, setLocalEndType] = useState<"never" | "on" | "after">(
+		endType,
+	);
 	const [localUntil, setLocalUntil] = useState<Date | undefined>(until);
 	const [localCount, setLocalCount] = useState<number>(count);
 
@@ -438,12 +466,25 @@ function CustomRecurrenceModal({
 	}
 
 	function handleSave() {
+		form.setValue("recurrencePreset", "custom");
 		form.setValue("recurrenceFreq", localFreq);
 		form.setValue("recurrenceInterval", localInterval);
 		form.setValue("recurrenceWeekdays", localWeekdays);
 		form.setValue("recurrenceEndType", localEndType);
-		form.setValue("recurrenceUntil", localUntil ? localUntil.toISOString() : undefined);
-		form.setValue("recurrenceCount", localCount);
+		form.setValue(
+			"recurrenceUntil",
+			localUntil ? localUntil.toISOString() : undefined,
+		);
+		form.setValue(
+			"recurrenceCount",
+			localEndType === "never"
+				? defaultRecurrenceCount(
+						localFreq as "daily" | "weekly" | "monthly" | "yearly",
+					)
+				: localEndType === "after"
+					? localCount
+					: undefined,
+		);
 		setOpen(false);
 		onClose();
 	}
@@ -455,10 +496,14 @@ function CustomRecurrenceModal({
 	}
 
 	return (
-		<Modal open={open} onOpenChange={(v) => {
-			setOpen(v);
-			if (!v) onClose();
-		}} modal={true}>
+		<Modal
+			open={open}
+			onOpenChange={(v) => {
+				setOpen(v);
+				if (!v) onClose();
+			}}
+			modal={true}
+		>
 			<ModalContent>
 				<ModalHeader>
 					<ModalTitle>Custom recurrence</ModalTitle>
@@ -466,8 +511,11 @@ function CustomRecurrenceModal({
 				<div className="p-4">
 					<div className="grid gap-3">
 						<div className="flex items-center gap-2">
-							<label className="w-32">Repeat every</label>
+							<label className="w-32" htmlFor="recurrence-interval">
+								Repeat every
+							</label>
 							<Input
+								id="recurrence-interval"
 								type="number"
 								min={1}
 								value={localInterval}
@@ -491,12 +539,22 @@ function CustomRecurrenceModal({
 						<div>
 							<div className="mb-2">Repeat on</div>
 							<div className="flex gap-2">
-								{["S","M","T","W","T","F","S"].map((label, i) => (
+								{[
+									{ label: "S", name: "Sunday", day: 0 },
+									{ label: "M", name: "Monday", day: 1 },
+									{ label: "T", name: "Tuesday", day: 2 },
+									{ label: "W", name: "Wednesday", day: 3 },
+									{ label: "T", name: "Thursday", day: 4 },
+									{ label: "F", name: "Friday", day: 5 },
+									{ label: "S", name: "Saturday", day: 6 },
+								].map(({ label, name, day }) => (
 									<button
-										key={i}
-										onClick={() => toggleWeekday(i)}
+										key={day}
+										onClick={() => toggleWeekday(day)}
 										type="button"
-										className={`h-8 w-8 rounded-full flex items-center justify-center ${localWeekdays.includes(i) ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+										aria-label={name}
+										aria-pressed={localWeekdays.includes(day)}
+										className={`flex h-8 w-8 items-center justify-center rounded-full ${localWeekdays.includes(day) ? "bg-blue-600 text-white" : "bg-gray-200"}`}
 									>
 										{label}
 									</button>
@@ -509,21 +567,53 @@ function CustomRecurrenceModal({
 							<div className="mb-2">Ends</div>
 							<div className="space-y-2">
 								<label className="flex items-center gap-2">
-									<input type="radio" name="endType" checked={localEndType === 'never'} onChange={() => setLocalEndType('never')} />
+									<input
+										type="radio"
+										name="endType"
+										checked={localEndType === "never"}
+										onChange={() => setLocalEndType("never")}
+									/>
 									<span className="ml-2">Never</span>
 								</label>
 								<label className="flex items-center gap-2">
-									<input type="radio" name="endType" checked={localEndType === 'on'} onChange={() => setLocalEndType('on')} />
+									<input
+										type="radio"
+										name="endType"
+										checked={localEndType === "on"}
+										onChange={() => setLocalEndType("on")}
+									/>
 									<span className="ml-2">On</span>
-									{localEndType === 'on' && (
-										<Input type="date" value={localUntil ? localUntil.toISOString().slice(0,10) : ''} onChange={(e) => setLocalUntil(e.target.value ? new Date(e.target.value) : undefined)} className="ml-4" />
+									{localEndType === "on" && (
+										<Input
+											type="date"
+											value={
+												localUntil ? localUntil.toISOString().slice(0, 10) : ""
+											}
+											onChange={(e) =>
+												setLocalUntil(
+													e.target.value ? new Date(e.target.value) : undefined,
+												)
+											}
+											className="ml-4"
+										/>
 									)}
 								</label>
 								<label className="flex items-center gap-2">
-									<input type="radio" name="endType" checked={localEndType === 'after'} onChange={() => setLocalEndType('after')} />
+									<input
+										type="radio"
+										name="endType"
+										checked={localEndType === "after"}
+										onChange={() => setLocalEndType("after")}
+									/>
 									<span className="ml-2">After</span>
-									{localEndType === 'after' && (
-										<Input type="number" min={1} value={localCount} onChange={(e) => setLocalCount(Number(e.target.value))} className="ml-4 w-24" />
+									{localEndType === "after" && (
+										<Input
+											type="number"
+											min={1}
+											value={localCount}
+											onChange={(e) => setLocalCount(Number(e.target.value))}
+											className="ml-4 w-24"
+										/>
 									)}
 								</label>
 							</div>
@@ -531,7 +621,9 @@ function CustomRecurrenceModal({
 					</div>
 				</div>
 				<ModalFooter>
-					<Button variant="outline" onClick={handleCancel}>Cancel</Button>
+					<Button variant="outline" onClick={handleCancel}>
+						Cancel
+					</Button>
 					<Button onClick={handleSave}>Done</Button>
 				</ModalFooter>
 			</ModalContent>
@@ -543,7 +635,7 @@ export function AddEditTaskDialog({
 	children,
 	startDate,
 	startTime,
-	task
+	task,
 }: IProps) {
 	const { isOpen, onClose, onToggle } = useDisclosure();
 	const { addTask, updateTask } = useCalendar();
@@ -596,7 +688,8 @@ export function AddEditTaskDialog({
 	const watchedDueDate = form.watch("dueDate");
 	const watchedColor = form.watch("color");
 	const autoEstimatedHours = useMemo(
-		() => estimateTaskDurationHours(watchedTitle ?? "", watchedDescription ?? ""),
+		() =>
+			estimateTaskDurationHours(watchedTitle ?? "", watchedDescription ?? ""),
 		[watchedTitle, watchedDescription],
 	);
 	const [useAutoEstimate, setUseAutoEstimate] = useState(!task?.estimatedHours);
@@ -636,6 +729,7 @@ export function AddEditTaskDialog({
 
 	useEffect(() => {
 		if (!useAutoEstimate) return;
+		void estimateRefreshKey;
 
 		const title = (watchedTitle ?? "").trim();
 		const description = (watchedDescription ?? "").trim();
@@ -682,7 +776,10 @@ export function AddEditTaskDialog({
 				);
 				setEstimateDetails(estimate);
 			} catch (error) {
-				if (controller.signal.aborted || estimateRequestId.current !== requestId) {
+				if (
+					controller.signal.aborted ||
+					estimateRequestId.current !== requestId
+				) {
 					return;
 				}
 
@@ -741,7 +838,7 @@ export function AddEditTaskDialog({
 			...values,
 			dueDate: format(values.dueDate, "yyyy-MM-dd'T'HH:mm:ss"),
 			estimatedHours,
-			id: isEditing ? task.id : Math.floor(Math.random() * 1000000),
+			id: isEditing ? task.id : crypto.randomUUID(),
 			user: isEditing
 				? task.user
 				: {
@@ -753,12 +850,12 @@ export function AddEditTaskDialog({
 		};
 	};
 
-	const saveTask = (formattedTask: ITask) => {
+	const saveTask = async (formattedTask: ITask) => {
 		if (isEditing) {
-			updateTask(formattedTask);
+			await updateTask(formattedTask);
 			toast.success("Task updated successfully");
 		} else {
-			addTask(formattedTask);
+			await addTask(formattedTask);
 			toast.success("Task created successfully");
 		}
 	};
@@ -769,10 +866,10 @@ export function AddEditTaskDialog({
 		setPendingTaskConflict(null);
 	};
 
-	const onSubmit = (values: TaskFormValues) => {
+	const onSubmit = async (values: TaskFormValues) => {
 		try {
 			const formattedTask = buildTaskFromValues(values);
-			saveTask(formattedTask);
+			await saveTask(formattedTask);
 			closeAfterTaskSave();
 		} catch (error) {
 			if (error instanceof TaskSchedulingError) {
@@ -793,72 +890,72 @@ export function AddEditTaskDialog({
 			<Modal open={isOpen} onOpenChange={onToggle} modal={false}>
 				<ModalTrigger asChild>{children}</ModalTrigger>
 				<ModalContent>
-				<ModalHeader>
-					<ModalTitle>{isEditing ? "Edit Task" : "Add New Task"}</ModalTitle>
-					<ModalDescription>
-						{isEditing
-							? "Modify your existing task."
-							: "Create a new task for your calendar."}
-					</ModalDescription>
-				</ModalHeader>
+					<ModalHeader>
+						<ModalTitle>{isEditing ? "Edit Task" : "Add New Task"}</ModalTitle>
+						<ModalDescription>
+							{isEditing
+								? "Modify your existing task."
+								: "Create a new task for your calendar."}
+						</ModalDescription>
+					</ModalHeader>
 
-				<Form {...form}>
-					<form
-						id="task-form"
-						onSubmit={form.handleSubmit(onSubmit)}
-						className="grid gap-4 py-4"
-					>
-						<FormField
-							control={form.control}
-							name="title"
-							render={({ field, fieldState }) => (
-								<FormItem>
-									<FormLabel htmlFor="title" className="required">
-										Title
-									</FormLabel>
-									<FormControl>
-										<Input
-											id="title"
-											placeholder="Enter a title"
-											{...field}
-											className={fieldState.invalid ? "border-red-500" : ""}
-										/>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-								<FormField
-									control={form.control}
-									name="dueDate"
-									render={({ field }) => (
-										<DateTimePicker form={form} field={field} />
-									)}
+					<Form {...form}>
+						<form
+							id="task-form"
+							onSubmit={form.handleSubmit(onSubmit)}
+							className="grid gap-4 py-4"
+						>
+							<FormField
+								control={form.control}
+								name="title"
+								render={({ field, fieldState }) => (
+									<FormItem>
+										<FormLabel htmlFor="title" className="required">
+											Title
+										</FormLabel>
+										<FormControl>
+											<Input
+												id="title"
+												placeholder="Enter a title"
+												{...field}
+												className={fieldState.invalid ? "border-red-500" : ""}
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name="dueDate"
+								render={({ field }) => (
+									<DateTimePicker form={form} field={field} />
+								)}
+							/>
+							<div className="flex items-center gap-2">
+								<input
+									id="task-eod"
+									type="checkbox"
+									checked={isEod}
+									onChange={(e) => {
+										const checked = e.target.checked;
+										setIsEod(checked);
+										if (!checked) return;
+										const currentDue = form.getValues("dueDate") ?? new Date();
+										form.setValue(
+											"dueDate",
+											set(new Date(currentDue), {
+												hours: 23,
+												minutes: 59,
+												seconds: 0,
+											}),
+											{ shouldDirty: true },
+										);
+									}}
+									className="size-4 rounded border-input"
 								/>
-								<div className="flex items-center gap-2">
-									<input
-										id="task-eod"
-										type="checkbox"
-										checked={isEod}
-										onChange={(e) => {
-											const checked = e.target.checked;
-											setIsEod(checked);
-											if (!checked) return;
-											const currentDue = form.getValues("dueDate") ?? new Date();
-											form.setValue(
-												"dueDate",
-												set(new Date(currentDue), {
-													hours: 23,
-													minutes: 59,
-													seconds: 0,
-												}),
-												{ shouldDirty: true },
-											);
-										}}
-										className="size-4 rounded border-input"
-									/>
-									<Label htmlFor="task-eod">EOD (11:59 PM)</Label>
-								</div>
+								<Label htmlFor="task-eod">EOD (11:59 PM)</Label>
+							</div>
 							<FormField
 								control={form.control}
 								name="estimatedHours"
@@ -910,63 +1007,66 @@ export function AddEditTaskDialog({
 							<FormField
 								control={form.control}
 								name="color"
-							render={({ field, fieldState }) => (
-								<FormItem>
-									<FormLabel className="required">Category</FormLabel>
-									<FormControl>
-										<Select value={field.value} onValueChange={field.onChange}>
-											<SelectTrigger
-												className={`w-full ${
-													fieldState.invalid ? "border-red-500" : ""
-												}`}
+								render={({ field, fieldState }) => (
+									<FormItem>
+										<FormLabel className="required">Category</FormLabel>
+										<FormControl>
+											<Select
+												value={field.value}
+												onValueChange={field.onChange}
 											>
-												<SelectValue placeholder="Select a category" />
-											</SelectTrigger>
-											<SelectContent>
-												{COLORS.map((color) => (
-													<SelectItem value={color} key={color}>
-														<div className="flex items-center gap-2">
-															<EventBullet color={color} />
-															{color}
-														</div>
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-						<FormField
-							control={form.control}
-							name="description"
-							render={({ field, fieldState }) => (
-								<FormItem>
-									<FormLabel> Description</FormLabel>
-									<FormControl>
-										<Textarea
-											{...field}
-											placeholder="Enter a description"
-											className={fieldState.invalid ? "border-red-500" : ""}
-										/>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-					</form>
-				</Form>
-				<ModalFooter className="flex justify-end gap-2">
-					<ModalClose asChild>
-						<Button type="button" variant="outline">
-							Cancel
+												<SelectTrigger
+													className={`w-full ${
+														fieldState.invalid ? "border-red-500" : ""
+													}`}
+												>
+													<SelectValue placeholder="Select a category" />
+												</SelectTrigger>
+												<SelectContent>
+													{COLORS.map((color) => (
+														<SelectItem value={color} key={color}>
+															<div className="flex items-center gap-2">
+																<EventBullet color={color} />
+																{color}
+															</div>
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name="description"
+								render={({ field, fieldState }) => (
+									<FormItem>
+										<FormLabel> Description</FormLabel>
+										<FormControl>
+											<Textarea
+												{...field}
+												placeholder="Enter a description"
+												className={fieldState.invalid ? "border-red-500" : ""}
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+						</form>
+					</Form>
+					<ModalFooter className="flex justify-end gap-2">
+						<ModalClose asChild>
+							<Button type="button" variant="outline">
+								Cancel
+							</Button>
+						</ModalClose>
+						<Button form="task-form" type="submit">
+							{isEditing ? "Save Changes" : "Create Task"}
 						</Button>
-					</ModalClose>
-					<Button form="task-form" type="submit">
-						{isEditing ? "Save Changes" : "Create Task"}
-					</Button>
-				</ModalFooter>
+					</ModalFooter>
 				</ModalContent>
 			</Modal>
 			<AlertDialog
@@ -977,13 +1077,18 @@ export function AddEditTaskDialog({
 			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>Not enough time before the due date</AlertDialogTitle>
+						<AlertDialogTitle>
+							Not enough time before the due date
+						</AlertDialogTitle>
 						<AlertDialogDescription>
 							This task is estimated to take{" "}
 							{pendingTaskConflict?.task.estimatedHours ?? 0} hours, but there
 							is not enough available time to schedule it before{" "}
 							{pendingTaskConflict
-								? format(new Date(pendingTaskConflict.task.dueDate), "MMM d, h:mm a")
+								? format(
+										new Date(pendingTaskConflict.task.dueDate),
+										"MMM d, h:mm a",
+									)
 								: "the due date"}
 							. Adjust the due date, reduce the estimate, or free up time before
 							the due date before creating this task.

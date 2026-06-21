@@ -35,7 +35,7 @@ export default function RootLayout({
 	children: React.ReactNode;
 }) {
 	return (
-		<html>
+		<html suppressHydrationWarning>
 			<body>
 				<ThemeProvider
 					attribute="class"
@@ -49,5 +49,5 @@ export default function RootLayout({
 				</ThemeProvider>
 			</body>
 		</html>
-  )
+	);
 }

@@ -1,26 +1,28 @@
 "use client";
 
 import type React from "react";
-import { createContext, useContext, useState, useMemo } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import {
-	addDays,
-	addWeeks,
-	addMonths,
-	addYears,
-	differenceInDays,
-} from "date-fns";
+	createPersistedEvent,
+	createPersistedTask,
+	deletePersistedEvent,
+	deletePersistedTask,
+	updatePersistedEvent,
+	updatePersistedTask,
+} from "@/modules/components/calendar/calendar-persistence";
 import { useLocalStorage } from "@/modules/components/calendar/hooks";
 import type {
 	IEvent,
-	IUser,
 	ITask,
+	IUser,
 } from "@/modules/components/calendar/interfaces";
+import { expandRecurringEvent } from "@/modules/components/calendar/recurrence";
 import {
+	type BusyInterval,
 	normalizeTaskDurationHours,
+	type ScheduledBlock,
 	scheduleTasksResult,
 	TaskSchedulingError,
-	type BusyInterval,
-	type ScheduledBlock,
 	type TaskSchedulingFailure,
 } from "@/modules/components/calendar/scheduling";
 import type {
@@ -47,14 +49,14 @@ interface ICalendarContext {
 	users: IUser[];
 	events: IEvent[];
 	tasks: ITask[];
-	addEvent: (event: IEvent) => void;
-	updateEvent: (event: IEvent) => void;
-	removeEvent: (eventId: number) => void;
+	persistenceEnabled: boolean;
+	addEvent: (event: IEvent) => Promise<void>;
+	updateEvent: (event: IEvent) => Promise<void>;
+	removeEvent: (eventId: string) => Promise<void>;
 	clearFilter: () => void;
-	addTask: (task: ITask) => void;
-	updateTask: (task: ITask) => void;
-	removeTask: (taskId: number) => void;
-
+	addTask: (task: ITask) => Promise<void>;
+	updateTask: (task: ITask) => Promise<void>;
+	removeTask: (taskId: string) => Promise<void>;
 }
 
 interface CalendarSettings {
@@ -83,8 +85,7 @@ const currentSchedulingStart = () => new Date();
 
 const coalesceTouchingBlocks = (blocks: ScheduledBlock[]): ScheduledBlock[] => {
 	const sortedBlocks = [...blocks].sort(
-		(a, b) =>
-			new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+		(a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
 	);
 	const coalesced: ScheduledBlock[] = [];
 
@@ -93,7 +94,8 @@ const coalesceTouchingBlocks = (blocks: ScheduledBlock[]): ScheduledBlock[] => {
 
 		if (
 			previous &&
-			new Date(previous.endDate).getTime() >= new Date(block.startDate).getTime()
+			new Date(previous.endDate).getTime() >=
+				new Date(block.startDate).getTime()
 		) {
 			coalesced[coalesced.length - 1] = {
 				startDate: previous.startDate,
@@ -175,6 +177,7 @@ export function CalendarProvider({
 	tasks = [],
 	badge = "colored",
 	view = "day",
+	persistenceEnabled = false,
 }: {
 	children: React.ReactNode;
 	users: IUser[];
@@ -182,6 +185,7 @@ export function CalendarProvider({
 	tasks?: ITask[];
 	view?: TCalendarView;
 	badge?: "dot" | "colored";
+	persistenceEnabled?: boolean;
 }) {
 	const [settings, setSettings] = useLocalStorage<CalendarSettings>(
 		"calendar-settings",
@@ -219,8 +223,9 @@ export function CalendarProvider({
 		[tasks, events],
 	);
 	const [allTasks, setAllTasks] = useState<ITask[]>(initialScheduledTasks);
-	const [filteredTasks, setFilteredTasks] =
-		useState<ITask[]>(initialScheduledTasks);
+	const [filteredTasks, setFilteredTasks] = useState<ITask[]>(
+		initialScheduledTasks,
+	);
 
 	const updateSettings = (newPartialSettings: Partial<CalendarSettings>) => {
 		setSettings({
@@ -284,95 +289,26 @@ export function CalendarProvider({
 		setSelectedDate(date);
 	};
 
-	const addEvent = (event: IEvent) => {
-		// If the event contains recurrence info, expand into multiple occurrences
-		if (event.recurrence && (event.recurrence.count && event.recurrence.count > 1)) {
-			const freq = event.recurrence.freq;
-			const interval = event.recurrence.interval || 1;
-			const count = event.recurrence.count || 1;
-			const baseStart = new Date(event.startDate);
-			const baseEnd = new Date(event.endDate);
-			const occurrences: IEvent[] = [];
-
-			// If weekly and byweekday provided, generate by scanning days forward and honoring interval
-			if (event.recurrence && event.recurrence.freq === "weekly" && event.recurrence.byweekday && event.recurrence.byweekday.length > 0) {
-				const weekdays = (event.recurrence.byweekday || []) as number[]; // 0..6
-				let cursor = new Date(baseStart);
-				let created = 0;
-				while (created < count) {
-					const weekIndex = Math.floor(differenceInDays(cursor, baseStart) / 7);
-					const inIntervalWeek = weekIndex % interval === 0;
-					if (inIntervalWeek && weekdays.includes(cursor.getDay()) && cursor >= baseStart) {
-						const s = new Date(cursor);
-						const duration = baseEnd.getTime() - baseStart.getTime();
-						const e = new Date(s.getTime() + duration);
-						occurrences.push({
-							...event,
-							id: Math.floor(Math.random() * 1000000000),
-							startDate: s.toISOString(),
-							endDate: e.toISOString(),
-						});
-						created += 1;
-					}
-					cursor = addDays(cursor, 1);
-				}
-			} else {
-				for (let i = 0; i < count; i++) {
-					let s = new Date(baseStart);
-					let e = new Date(baseEnd);
-					const step = i * interval;
-					switch (freq) {
-						case "daily":
-							s = addDays(baseStart, step);
-							e = addDays(baseEnd, step);
-							break;
-						case "weekly":
-							s = addWeeks(baseStart, step);
-							e = addWeeks(baseEnd, step);
-							break;
-						case "monthly":
-							s = addMonths(baseStart, step);
-							e = addMonths(baseEnd, step);
-							break;
-						case "yearly":
-							s = addYears(baseStart, step);
-							e = addYears(baseEnd, step);
-							break;
-						default:
-							s = addDays(baseStart, step);
-							e = addDays(baseEnd, step);
-					}
-
-					occurrences.push({
-						...event,
-						id: Math.floor(Math.random() * 1000000000),
-						startDate: s.toISOString(),
-						endDate: e.toISOString(),
-					});
-				}
-			}
-
-			const nextEvents = [...allEvents, ...occurrences];
-			const scheduledTasks = rescheduleAllTasks(allTasks, nextEvents);
-
-			setAllEvents(nextEvents);
-			setFilteredEvents((prev) => [...prev, ...occurrences]);
-			setAllTasks(scheduledTasks);
-			setFilteredTasks(scheduledTasks);
-			return;
-		}
-
-		// Non-recurring event
-		const nextEvents = [...allEvents, event];
-		const scheduledTasks = rescheduleAllTasks(allTasks, nextEvents);
+	const addEvent = async (event: IEvent) => {
+		const localOccurrences = event.recurrence
+			? expandRecurringEvent(event)
+			: [event];
+		const scheduledTasks = rescheduleAllTasks(allTasks, [
+			...allEvents,
+			...localOccurrences,
+		]);
+		const persistedEvents = persistenceEnabled
+			? await createPersistedEvent(event)
+			: localOccurrences;
+		const nextEvents = [...allEvents, ...persistedEvents];
 
 		setAllEvents(nextEvents);
-		setFilteredEvents((prev) => [...prev, event]);
+		setFilteredEvents((prev) => [...prev, ...persistedEvents]);
 		setAllTasks(scheduledTasks);
 		setFilteredTasks(scheduledTasks);
 	};
 
-	const updateEvent = (event: IEvent) => {
+	const updateEvent = async (event: IEvent) => {
 		const updated = {
 			...event,
 			startDate: new Date(event.startDate).toISOString(),
@@ -381,16 +317,24 @@ export function CalendarProvider({
 
 		const nextEvents = allEvents.map((e) => (e.id === event.id ? updated : e));
 		const scheduledTasks = rescheduleAllTasks(allTasks, nextEvents);
+		const persistedEvent = persistenceEnabled
+			? await updatePersistedEvent(updated)
+			: updated;
 
-		setAllEvents(nextEvents);
-		setFilteredEvents((prev) => prev.map((e) => (e.id === event.id ? updated : e)));
+		setAllEvents((prev) =>
+			prev.map((item) => (item.id === event.id ? persistedEvent : item)),
+		);
+		setFilteredEvents((prev) =>
+			prev.map((item) => (item.id === event.id ? persistedEvent : item)),
+		);
 		setAllTasks(scheduledTasks);
 		setFilteredTasks(scheduledTasks);
 	};
 
-	const removeEvent = (eventId: number) => {
+	const removeEvent = async (eventId: string) => {
 		const nextEvents = allEvents.filter((e) => e.id !== eventId);
 		const scheduledTasks = rescheduleAllTasks(allTasks, nextEvents);
+		if (persistenceEnabled) await deletePersistedEvent(eventId);
 
 		setAllEvents(nextEvents);
 		setFilteredEvents((prev) => prev.filter((e) => e.id !== eventId));
@@ -405,19 +349,26 @@ export function CalendarProvider({
 		return requireScheduledCalendarTasks(inputTasks, inputEvents);
 	};
 
-	const addTask = (task: ITask) => {
+	const addTask = async (task: ITask) => {
 		const taskToAdd: ITask = {
 			...task,
 			dueDate: new Date(task.dueDate).toISOString(),
 			estimatedHours: normalizeTaskDurationHours(task.estimatedHours),
 		};
 		const scheduled = rescheduleAllTasks([...allTasks, taskToAdd]);
+		const persistedTask = persistenceEnabled
+			? await createPersistedTask(taskToAdd)
+			: scheduled.find((item) => item.id === taskToAdd.id);
+		if (!persistedTask) throw new Error("Task creation did not return a task.");
+		const finalTasks = scheduled.map((item) =>
+			item.id === taskToAdd.id ? persistedTask : item,
+		);
 
-		setAllTasks(scheduled);
-		setFilteredTasks(scheduled);
+		setAllTasks(finalTasks);
+		setFilteredTasks(finalTasks);
 	};
 
-	const updateTask = (task: ITask) => {
+	const updateTask = async (task: ITask) => {
 		const updatedTask: ITask = {
 			...task,
 			dueDate: new Date(task.dueDate).toISOString(),
@@ -425,15 +376,23 @@ export function CalendarProvider({
 		};
 		const nextTasks = allTasks.map((t) => (t.id === task.id ? updatedTask : t));
 		const scheduled = rescheduleAllTasks(nextTasks);
+		const persistedTask = persistenceEnabled
+			? await updatePersistedTask(updatedTask)
+			: scheduled.find((item) => item.id === task.id);
+		if (!persistedTask) throw new Error("Task update did not return a task.");
+		const finalTasks = scheduled.map((item) =>
+			item.id === task.id ? persistedTask : item,
+		);
 
-		setAllTasks(scheduled);
-		setFilteredTasks(scheduled);
+		setAllTasks(finalTasks);
+		setFilteredTasks(finalTasks);
 	};
 
-	const removeTask = (taskId: number) => {
+	const removeTask = async (taskId: string) => {
+		if (persistenceEnabled) await deletePersistedTask(taskId);
 		setAllTasks((prev) => prev.filter((t) => t.id !== taskId));
 		setFilteredTasks((prev) => prev.filter((t) => t.id !== taskId));
-	};	
+	};
 
 	const clearFilter = () => {
 		setFilteredEvents(allEvents);
@@ -448,7 +407,7 @@ export function CalendarProvider({
 			const blocks = coalesceTouchingBlocks(t.scheduledBlocks ?? []);
 
 			return blocks.map((block, index) => ({
-				id: t.id * 100 + index,
+				id: `${t.id}:block:${index}`,
 				taskId: t.id,
 				startDate: block.startDate,
 				endDate: block.endDate,
@@ -470,6 +429,7 @@ export function CalendarProvider({
 		badgeVariant,
 		setBadgeVariant,
 		users,
+		persistenceEnabled,
 		selectedColors,
 		filterEventsBySelectedColors,
 		filterEventsBySelectedUser,

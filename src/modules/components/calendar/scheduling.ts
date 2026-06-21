@@ -18,7 +18,7 @@ export type TaskScheduleStatus =
 	  };
 
 export interface SchedulingTask {
-	id: number;
+	id: string;
 	dueDate: string;
 	estimatedHours?: number;
 	scheduledBlocks?: ScheduledBlock[];
@@ -63,7 +63,7 @@ export type TaskSchedulingFailure<TTask extends SchedulingTask> = {
 	status: "failed";
 	reason: TaskSchedulingFailureReason;
 	message: string;
-	taskId?: number;
+	taskId?: string;
 	scheduledTasks: ScheduledTask<TTask>[];
 };
 
@@ -73,7 +73,7 @@ export type TaskSchedulingResult<TTask extends SchedulingTask> =
 
 export class TaskSchedulingError extends Error {
 	reason: TaskSchedulingFailureReason;
-	taskId?: number;
+	taskId?: string;
 
 	constructor(
 		failure: Pick<
@@ -416,7 +416,8 @@ export function scheduleTasks<TTask extends SchedulingTask>({
 	const busyIntervalsToScheduleAround = normalizeBusyIntervals(busyInputs);
 	const sortedTasks = [...tasks].sort(
 		(a, b) =>
-			toDate(a.dueDate).getTime() - toDate(b.dueDate).getTime() || a.id - b.id,
+			toDate(a.dueDate).getTime() - toDate(b.dueDate).getTime() ||
+			a.id.localeCompare(b.id),
 	);
 	const scheduledTasks: ScheduledTask<TTask>[] = [];
 
@@ -500,8 +501,8 @@ function parseValidDate(value: string | Date): Date | null {
 	return date;
 }
 
-function extractTaskIdFromSchedulingMessage(message: string): number | undefined {
-	const match = message.match(/task\s+(\d+)/i);
+function extractTaskIdFromSchedulingMessage(message: string): string | undefined {
+	const match = message.match(/task\s+([^\s]+)/i);
 	if (!match) return undefined;
-	return Number(match[1]);
+	return match[1];
 }

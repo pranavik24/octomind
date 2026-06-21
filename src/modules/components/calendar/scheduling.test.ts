@@ -23,7 +23,7 @@ describe("task scheduling", () => {
 		const [task] = scheduleTasks({
 			tasks: [
 				{
-					id: 4,
+					id: "task-4",
 					title: "Email teacher",
 					description: "Ask a quick clarification question.",
 					color: "Other",
@@ -47,7 +47,7 @@ describe("task scheduling", () => {
 		const [task] = scheduleTasks({
 			tasks: [
 				{
-					id: 6,
+					id: "task-6",
 					title: "Review worksheet",
 					description: "Check answers before submitting.",
 					color: "Homework",
@@ -72,7 +72,7 @@ describe("task scheduling", () => {
 		const [task] = scheduleTasks({
 			tasks: [
 				{
-					id: 5,
+					id: "task-5",
 					title: "Build history presentation",
 					description: "Research, outline, draft slides, and rehearse.",
 					color: "Projects",
@@ -106,7 +106,7 @@ describe("task scheduling", () => {
 		const [task] = scheduleTasks({
 			tasks: [
 				{
-					id: 1,
+					id: "task-1",
 					title: "Practice SAT math timed section",
 					description: "Do one timed module and review mistakes.",
 					color: "Studying",
@@ -138,7 +138,7 @@ describe("task scheduling", () => {
 		const [task] = scheduleTasks({
 			tasks: [
 				{
-					id: 2,
+					id: "task-2",
 					title: "Write lab report",
 					description: "Finish conclusion and data table.",
 					color: "Homework",
@@ -166,7 +166,7 @@ describe("task scheduling", () => {
 				scheduleTasks({
 					tasks: [
 						{
-							id: 3,
+							id: "task-3",
 							title: "Impossible task",
 							description: "No time remains.",
 							color: "Other",
@@ -180,7 +180,7 @@ describe("task scheduling", () => {
 					dayStartHour: 8,
 					dayEndHour: 9,
 				}),
-			/Unable to schedule task 3 before its due date/,
+			/Unable to schedule task task-3 before its due date/,
 		);
 	});
 });

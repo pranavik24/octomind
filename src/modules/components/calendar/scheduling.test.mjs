@@ -24,7 +24,7 @@ describe("scheduleTasks", () => {
 		const dueDate = "2026-06-18T17:00:00.000Z";
 
 		const result = scheduleTasksResult({
-			tasks: [task(1, dueDate, 2.5)],
+			tasks: [task("1", dueDate, 2.5)],
 			busyIntervals: [],
 		});
 
@@ -50,7 +50,7 @@ describe("scheduleTasks", () => {
 
 	it("splits tasks longer than one hour into chunks of at most one hour", () => {
 		const result = scheduleTasksResult({
-			tasks: [task(1, "2026-06-18T17:00:00.000Z", 3)],
+			tasks: [task("1", "2026-06-18T17:00:00.000Z", 3)],
 			busyIntervals: [],
 		});
 
@@ -68,8 +68,8 @@ describe("scheduleTasks", () => {
 	it("avoids busy events and previously scheduled task chunks", () => {
 		const result = scheduleTasksResult({
 			tasks: [
-				task(1, "2026-06-18T17:00:00.000Z", 1),
-				task(2, "2026-06-18T17:00:00.000Z", 1),
+				task("1", "2026-06-18T17:00:00.000Z", 1),
+				task("2", "2026-06-18T17:00:00.000Z", 1),
 			],
 			busyIntervals: [busy("2026-06-18T15:00:00.000Z", "2026-06-18T16:00:00.000Z")],
 		});
@@ -96,19 +96,19 @@ describe("scheduleTasks", () => {
 
 	it("returns an explicit failure when capacity before the due date is insufficient", () => {
 		const result = scheduleTasksResult({
-			tasks: [task(7, "2026-06-18T17:00:00.000Z", 1)],
+			tasks: [task("7", "2026-06-18T17:00:00.000Z", 1)],
 			busyIntervals: [busy("2026-06-11T00:00:00.000Z", "2026-06-18T17:00:00.000Z")],
 			scheduleWindowDays: 7,
 		});
 
 		assert.equal(result.status, "failed");
 		assert.equal(result.reason, "INSUFFICIENT_CAPACITY");
-		assert.equal(result.taskId, 7);
+		assert.equal(result.taskId, "7");
 		assert.match(result.message, /before its due date/i);
 	});
 
 	it("returns an explicit failure for invalid due dates without mutating input tasks", () => {
-		const inputTasks = [task(9, "not-a-date", 1)];
+		const inputTasks = [task("9", "not-a-date", 1)];
 
 		const result = scheduleTasksResult({
 			tasks: inputTasks,
@@ -117,7 +117,7 @@ describe("scheduleTasks", () => {
 
 		assert.equal(result.status, "failed");
 		assert.equal(result.reason, "INVALID_DUE_DATE");
-		assert.equal(result.taskId, 9);
-		assert.deepEqual(inputTasks, [task(9, "not-a-date", 1)]);
+		assert.equal(result.taskId, "9");
+		assert.deepEqual(inputTasks, [task("9", "not-a-date", 1)]);
 	});
 });

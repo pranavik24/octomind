@@ -12,17 +12,36 @@ export const eventSchema = z.object({
 	color: z.enum(
 		["School", "Homework", "Studying", "Extracurriculars", "Work", "Other"],
 		{
-		required_error: "Variant is required",
+			required_error: "Variant is required",
 		},
 	),
 	// Simple recurrence fields for the UI: optional frequency and count
 	recurrenceFreq: z
 		.string()
 		.optional()
-		.refine((v) => !v || ["none", "daily", "weekly", "monthly", "yearly"].includes(v), {
-			message: "Invalid recurrence frequency",
-		}),
-	recurrenceCount: z.number().int().positive().optional(),
+		.refine(
+			(v) => !v || ["none", "daily", "weekly", "monthly", "yearly"].includes(v),
+			{
+				message: "Invalid recurrence frequency",
+			},
+		),
+	recurrenceCount: z.number().int().min(1).max(730).optional(),
+	recurrencePreset: z
+		.enum([
+			"none",
+			"daily",
+			"weekly",
+			"monthly",
+			"yearly",
+			"weekdays",
+			"custom",
+		])
+		.optional(),
+	recurrenceInterval: z.number().int().min(1).max(100).optional(),
+	recurrenceWeekdays: z.array(z.number().int().min(0).max(6)).optional(),
+	recurrenceEndType: z.enum(["never", "on", "after"]).optional(),
+	recurrenceUntil: z.string().optional(),
+	recurrenceBySetPos: z.number().int().min(1).max(5).optional(),
 });
 
 const taskSchema = eventSchema.extend({

@@ -35,17 +35,18 @@ export function EventDetailsDialog({ event, children }: IProps) {
 	const relatedTask = tasks.find((task) => task.id === taskId);
 	const isTask = !!relatedTask;
 
-	const deleteEvent = (eventId: number) => {
+	const deleteEvent = async (eventId: string) => {
 		try {
 			if (isTask) {
-				removeTask(taskId);
+				await removeTask(taskId);
 				toast.success("Task deleted successfully.");
 			} else {
-				removeEvent(eventId);
+				await removeEvent(eventId);
 				toast.success("Event deleted successfully.");
 			}
-		} catch {
-			toast.error("Error deleting event.");
+		} catch (error) {
+			console.error("Error deleting item:", error);
+			toast.error("Error deleting item.");
 		}
 	};
 
@@ -115,7 +116,7 @@ export function EventDetailsDialog({ event, children }: IProps) {
 					<Button
 						variant="destructive"
 						onClick={() => {
-							deleteEvent(event.id);
+							void deleteEvent(event.id);
 						}}
 					>
 						Delete

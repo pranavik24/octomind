@@ -1,25 +1,22 @@
-import React from "react";
 import { CalendarBody } from "@/modules/components/calendar/calendar-body";
 import { CalendarProvider } from "@/modules/components/calendar/contexts/calendar-context";
 import { DndProvider } from "@/modules/components/calendar/contexts/dnd-context";
 import { CalendarHeader } from "@/modules/components/calendar/header/calendar-header";
-import { getEvents, getTasks, getUsers } from "@/modules/components/calendar/requests";
+import { getCalendarForUser } from "@/modules/persistence/calendar-repository";
 
-async function getCalendarData() {
-	return {
-		events: await getEvents(),
-		tasks: await getTasks(),
-		users: await getUsers(),
-	};
-}
-
-export async function Calendar() {
-	const { events, tasks, users } = await getCalendarData();
+export async function Calendar({ userId }: { userId: string }) {
+	const { events, tasks, users } = await getCalendarForUser(userId);
 
 	return (
-		<CalendarProvider events={events} tasks={tasks} users={users} view="month">
+		<CalendarProvider
+			events={events}
+			tasks={tasks}
+			users={users}
+			view="month"
+			persistenceEnabled
+		>
 			<DndProvider showConfirmation={false}>
-				<div className="w-full rounded-xl border bg-white shadow-sm">
+				<div className="w-full rounded-lg border bg-white shadow-sm">
 					<CalendarHeader />
 					<CalendarBody />
 				</div>

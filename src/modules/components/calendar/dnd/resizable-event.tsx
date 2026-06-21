@@ -12,6 +12,7 @@ import { motion } from "framer-motion";
 import { Resizable, type ResizeCallback } from "re-resizable";
 import type React from "react";
 import { useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useCalendar } from "@/modules/components/calendar/contexts/calendar-context";
 
@@ -91,10 +92,13 @@ export function ResizableEvent({
 				end: format(newEnd, use24HourFormat ? "HH:mm" : "h:mm a"),
 			});
 
-			updateEvent({
+			void updateEvent({
 				...event,
 				startDate: newStart.toISOString(),
 				endDate: newEnd.toISOString(),
+			}).catch((error) => {
+				console.error("Failed to resize event:", error);
+				toast.error("Failed to update event");
 			});
 		},
 		[
