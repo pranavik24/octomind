@@ -12,7 +12,23 @@ interface OnboardingDependencies {
 
 function assertSameOrigin(request: Request) {
 	const origin = request.headers.get("origin");
-	if (!origin || origin !== new URL(request.url).origin) {
+	const requestUrl = new URL(request.url);
+	const host = request.headers.get("host");
+	const hostOrigin = host ? `${requestUrl.protocol}//${host}` : null;
+	let configuredOrigin: string | null = null;
+	try {
+		configuredOrigin = process.env.NEXTAUTH_URL
+			? new URL(process.env.NEXTAUTH_URL).origin
+			: null;
+	} catch {
+		configuredOrigin = null;
+	}
+	if (
+		!origin ||
+		(origin !== requestUrl.origin &&
+			origin !== hostOrigin &&
+			origin !== configuredOrigin)
+	) {
 		throw new ApiError("validation_error", 400, "Invalid request origin.");
 	}
 }
