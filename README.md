@@ -1,4 +1,5 @@
 # OctoMind - AI Task Scheduler
+OctoMind is a calendar and task scheduling application that can automatically schedule tasks throughout the week. Add events like a traditional calendar, or describe a task and let the scheduler estimate its duration and place it into your calendar.
 
 An AI-powered calendar and task scheduler built with Next.js, React, TypeScript, Gemini, Prisma, Supabase, Auth.js, and shadcn/ui.
 
