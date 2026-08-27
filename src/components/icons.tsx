@@ -85,49 +85,17 @@ const AngularIcon = () => (
 		<g clip-path="url(#a)">
 			<path
 				_ngcontent-ng-c249881476=""
-				fill="url(#b)"
+				fill="#dd0031"
 				d="m222.077 39.192-8.019 125.923L137.387 0l84.69 39.192Zm-53.105 162.825-57.933 33.056-57.934-33.056 11.783-28.556h92.301l11.783 28.556ZM111.039 62.675l30.357 73.803H80.681l30.358-73.803ZM7.937 165.115 0 39.192 84.69 0 7.937 165.115Z"
 			/>
 			<path
 				_ngcontent-ng-c249881476=""
-				fill="url(#c)"
+				fill="#c3002f"
 				d="m222.077 39.192-8.019 125.923L137.387 0l84.69 39.192Zm-53.105 162.825-57.933 33.056-57.934-33.056 11.783-28.556h92.301l11.783 28.556ZM111.039 62.675l30.357 73.803H80.681l30.358-73.803ZM7.937 165.115 0 39.192 84.69 0 7.937 165.115Z"
+				opacity=".35"
 			/>
 		</g>
 		<defs>
-			<linearGradient
-				_ngcontent-ng-c249881476=""
-				id="b"
-				x1="49.009"
-				x2="225.829"
-				y1="213.75"
-				y2="129.722"
-				gradientUnits="userSpaceOnUse"
-			>
-				<stop _ngcontent-ng-c249881476="" stop-color="#E40035" />
-				<stop _ngcontent-ng-c249881476="" offset=".24" stop-color="#F60A48" />
-				<stop _ngcontent-ng-c249881476="" offset=".352" stop-color="#F20755" />
-				<stop _ngcontent-ng-c249881476="" offset=".494" stop-color="#DC087D" />
-				<stop _ngcontent-ng-c249881476="" offset=".745" stop-color="#9717E7" />
-				<stop _ngcontent-ng-c249881476="" offset="1" stop-color="#6C00F5" />
-			</linearGradient>
-			<linearGradient
-				_ngcontent-ng-c249881476=""
-				id="c"
-				x1="41.025"
-				x2="156.741"
-				y1="28.344"
-				y2="160.344"
-				gradientUnits="userSpaceOnUse"
-			>
-				<stop _ngcontent-ng-c249881476="" stop-color="#FF31D9" />
-				<stop
-					_ngcontent-ng-c249881476=""
-					offset="1"
-					stop-color="#FF5BE1"
-					stop-opacity="0"
-				/>
-			</linearGradient>
 			<clipPath _ngcontent-ng-c249881476="" id="a">
 				<path _ngcontent-ng-c249881476="" fill="#fff" d="M0 0h223v236H0z" />
 			</clipPath>
@@ -143,82 +111,22 @@ const SolidIcon = () => (
 		height={36}
 	>
 		<title>Solid Logo</title>
-		<defs>
-			<linearGradient
-				id="solid-a"
-				gradientUnits="userSpaceOnUse"
-				x1="27.5"
-				y1="3"
-				x2="152"
-				y2="63.5"
-			>
-				<stop offset=".1" stopColor="#76b3e1" />
-				<stop offset=".3" stopColor="#dcf2fd" />
-				<stop offset="1" stopColor="#76b3e1" />
-			</linearGradient>
-			<linearGradient
-				id="solid-b"
-				gradientUnits="userSpaceOnUse"
-				x1="95.8"
-				y1="32.6"
-				x2="74"
-				y2="105.2"
-			>
-				<stop offset="0" stopColor="#76b3e1" />
-				<stop offset=".5" stopColor="#4377bb" />
-				<stop offset="1" stopColor="#1f3b77" />
-			</linearGradient>
-			<linearGradient
-				id="solid-c"
-				gradientUnits="userSpaceOnUse"
-				x1="18.4"
-				y1="64.2"
-				x2="144.3"
-				y2="149.8"
-			>
-				<stop offset="0" stopColor="#315aa9" />
-				<stop offset=".5" stopColor="#518ac8" />
-				<stop offset="1" stopColor="#315aa9" />
-			</linearGradient>
-			<linearGradient
-				id="solid-d"
-				gradientUnits="userSpaceOnUse"
-				x1="75.2"
-				y1="74.5"
-				x2="24.4"
-				y2="260.8"
-			>
-				<stop offset="0" stopColor="#4377bb" />
-				<stop offset=".5" stopColor="#1a336b" />
-				<stop offset="1" stopColor="#1a336b" />
-			</linearGradient>
-		</defs>
 		<g style={{ isolation: "isolate" }}>
 			<path
 				d="M163 35S110-4 69 5l-3 1c-6 2-11 5-14 9l-2 3-15 26 26 5c11 7 25 10 38 7l46 9 18-30z"
 				fill="#76b3e1"
 			/>
 			<path
-				d="M163 35S110-4 69 5l-3 1c-6 2-11 5-14 9l-2 3-15 26 26 5c11 7 25 10 38 7l46 9 18-30z"
-				opacity=".3"
-				fill="url(#solid-a)"
-			/>
-			<path
 				d="M52 35l-4 1c-17 5-22 21-13 35 10 13 31 20 48 15l62-21S92 26 52 35z"
 				fill="#518ac8"
 			/>
 			<path
-				d="M52 35l-4 1c-17 5-22 21-13 35 10 13 31 20 48 15l62-21S92 26 52 35z"
-				opacity=".3"
-				fill="url(#solid-b)"
-			/>
-			<path
 				d="M134 80a45 45 0 00-48-15L24 85 4 120l112 19 20-36c4-7 3-15-2-23z"
-				fill="url(#solid-c)"
+				fill="#315aa9"
 			/>
 			<path
 				d="M114 115a45 45 0 00-48-15L4 120s53 40 94 30l3-1c17-5 23-21 13-34z"
-				fill="url(#solid-d)"
+				fill="#1a336b"
 			/>
 		</g>
 	</svg>

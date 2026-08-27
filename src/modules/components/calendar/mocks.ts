@@ -115,7 +115,7 @@ const events = [
 	"Home renovation meeting",
 ];
 
-const mockGenerator = (numberOfEvents: number): IEvent[] => {
+export const mockGenerator = (numberOfEvents: number): IEvent[] => {
 	const result: IEvent[] = [];
 	let currentId = 1;
 
@@ -130,7 +130,7 @@ const mockGenerator = (numberOfEvents: number): IEvent[] => {
 
 	// Create an event happening now
 	const currentEvent = {
-		id: currentId++,
+		id: `mock-event-${currentId++}`,
 		startDate: new Date(now.getTime() - 30 * 60000).toISOString(),
 		endDate: new Date(now.getTime() + 30 * 60000).toISOString(),
 		title: events[Math.floor(Math.random() * events.length)],
@@ -178,7 +178,7 @@ const mockGenerator = (numberOfEvents: number): IEvent[] => {
 		}
 
 		result.push({
-			id: currentId++,
+			id: `mock-event-${currentId++}`,
 			startDate: startDate.toISOString(),
 			endDate: endDate.toISOString(),
 			title: events[Math.floor(Math.random() * events.length)],
@@ -193,7 +193,7 @@ const mockGenerator = (numberOfEvents: number): IEvent[] => {
 };
 
 const createEvent = (
-	id: number,
+	id: string,
 	date: Date,
 	startHour: number,
 	startMinute: number,
@@ -254,7 +254,7 @@ const generateSchoolAndActivities = (
 		if (isWeekday) {
 			result.push(
 				createEvent(
-					currentId++,
+					`mock-school-${currentId++}`,
 					currentDate,
 					7,
 					40,
@@ -284,7 +284,7 @@ const generateSchoolAndActivities = (
 
 			result.push(
 				createEvent(
-					currentId++,
+					`mock-game-${currentId++}`,
 					currentDate,
 					gameTime.startHour,
 					gameTime.startMinute,
@@ -314,7 +314,7 @@ const generateSchoolAndActivities = (
 
 			result.push(
 				createEvent(
-					currentId++,
+					`mock-practice-${currentId++}`,
 					currentDate,
 					practiceTime.startHour,
 					practiceTime.startMinute,
@@ -354,7 +354,7 @@ const generateSchoolAndActivities = (
 
 			result.push(
 				createEvent(
-					currentId++,
+					`mock-social-${currentId++}`,
 					currentDate,
 					socialTime.startHour,
 					socialTime.startMinute,
@@ -516,7 +516,7 @@ const generateMonthlyTasks = (): ITask[] => {
 			if (!dueDate) continue;
 
 			tasks.push({
-				id: id++,
+				id: `mock-task-${id++}`,
 				dueDate: dueDate.toISOString(),
 				estimatedHours: template.estimatedHours,
 				title: template.title,

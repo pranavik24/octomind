@@ -1,9 +1,9 @@
-# Octomind Calendar
-Octomind Calendar is a calendar and task scheduling application that can automatically schedule your tasks throughout the week. You can schedule events just like any other calendar application, but you can also add tasks! Simply by adding a Task and writing a short description, the estimated time to complete this task is calculated and automatically scheduled into your calendar.
+# OctoMind - AI Task Scheduler
+OctoMind is a calendar and task scheduling application that can automatically schedule tasks throughout the week. Add events like a traditional calendar, or describe a task and let the scheduler estimate its duration and place it into your calendar.
 
-Task completion time estimation built with Llama2. Front end built with React, TypeScript, and ShadCN UI components.
+An AI-powered calendar and task scheduler built with Next.js, React, TypeScript, Gemini, Prisma, Supabase, Auth.js, and shadcn/ui.
 
-<img width="1790" height="977" alt="Octomind Calender Image" src="./screenshots/Screenshot 2026-02-11 at 3.36.55 AM.png" />
+<img width="1790" height="977" alt="OctoMind Calendar" src="./screenshots/Screenshot 2026-02-11 at 3.36.55 AM.png" />
 
 ## Running Locally
 
@@ -30,4 +30,4 @@ To run the project locally, follow these steps:
 
 4.  **Open the application**:
 
-    Open [http://localhost:3000](http://localhost:3000) in your browser to view the application.
+    Open [http://127.0.0.1:3002](http://127.0.0.1:3002) in your browser to view the application.

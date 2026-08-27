@@ -7,12 +7,12 @@ import type { TEventColor } from "@/modules/components/calendar/types";
 const eventBulletVariants = cva("size-2 rounded-full", {
 	variants: {
 		color: {
-			School: "bg-indigo-600 dark:bg-indigo-500",
-			Homework: "bg-cyan-600 dark:bg-cyan-500",
-			Studying: "bg-violet-600 dark:bg-violet-500",
-			Extracurriculars: "bg-green-600 dark:bg-green-500",
-			Work: "bg-amber-600 dark:bg-amber-500",
-			Other: "bg-slate-600 dark:bg-slate-500",
+			School: "reef-dot-school",
+			Homework: "reef-dot-homework",
+			Studying: "reef-dot-studying",
+			Extracurriculars: "reef-dot-extracurriculars",
+			Work: "reef-dot-work",
+			Other: "reef-dot-other",
 		},
 	},
 	defaultVariants: {

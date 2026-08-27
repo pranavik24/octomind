@@ -15,13 +15,13 @@ import { Button } from "@/components/ui/button";
 import { useCalendar } from "@/modules/components/calendar/contexts/calendar-context";
 
 interface DeleteEventDialogProps {
-	eventId: number;
+	eventId: string;
 }
 
 export default function DeleteEventDialog({ eventId }: DeleteEventDialogProps) {
-	const { removeEvent, removeTask, tasks, events } = useCalendar();
+	const { removeEvent, removeTask, tasks } = useCalendar();
 
-	const handleDelete = () => {
+	const handleDelete = async () => {
 		// Treat only null/undefined as missing — allow id 0 to be valid
 		if (eventId == null) return;
 
@@ -29,10 +29,10 @@ export default function DeleteEventDialog({ eventId }: DeleteEventDialogProps) {
 		const isTask = tasks.some((t) => t.id === eventId);
 		try {
 			if (isTask) {
-				removeTask(eventId);
+				await removeTask(eventId);
 				toast.success("Task deleted successfully.");
 			} else {
-				removeEvent(eventId);
+				await removeEvent(eventId);
 				toast.success("Event deleted successfully.");
 			}
 		} catch (err) {
@@ -64,7 +64,9 @@ export default function DeleteEventDialog({ eventId }: DeleteEventDialogProps) {
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogCancel>Cancel</AlertDialogCancel>
-					<AlertDialogAction onClick={handleDelete}>Continue</AlertDialogAction>
+					<AlertDialogAction onClick={() => void handleDelete()}>
+						Continue
+					</AlertDialogAction>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>

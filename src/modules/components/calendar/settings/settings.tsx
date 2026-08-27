@@ -2,9 +2,11 @@ import {
 	CheckIcon,
 	DotIcon,
 	PaletteIcon,
+	Plug,
 	SettingsIcon,
 	XIcon,
 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -12,15 +14,12 @@ import {
 	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
-	DropdownMenuRadioGroup,
-	DropdownMenuRadioItem,
 	DropdownMenuSeparator,
 	DropdownMenuShortcut,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import { useCalendar } from "@/modules/components/calendar/contexts/calendar-context";
-import type { TCalendarView } from "@/modules/components/calendar/types";
 import { useDragDrop } from "@/modules/components/calendar/contexts/dnd-context";
 
 export function Settings() {
@@ -29,10 +28,6 @@ export function Settings() {
 		setBadgeVariant,
 		use24HourFormat,
 		toggleTimeFormat,
-		view,
-		setView,
-		agendaModeGroupBy,
-		setAgendaModeGroupBy,
 	} = useCalendar();
 	const { showConfirmation, setShowConfirmation } = useDragDrop();
 	const isDotVariant = badgeVariant === "dot";
@@ -40,16 +35,31 @@ export function Settings() {
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Button variant="outline" size="icon">
+				<Button
+					variant="outline"
+					className="border-border bg-card hover:bg-accent"
+					aria-label="Open calendar settings"
+					title="Calendar settings"
+				>
 					<SettingsIcon />
+					<span className="hidden sm:inline">Settings</span>
 				</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent className="w-56">
+			<DropdownMenuContent className="w-72">
 				<DropdownMenuLabel>Calendar settings</DropdownMenuLabel>
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>
+					<DropdownMenuItem asChild>
+						<Link href="/settings/integrations">
+							<Plug className="size-4" />
+							Integrations
+						</Link>
+					</DropdownMenuItem>
+				</DropdownMenuGroup>
+				<DropdownMenuSeparator />
+				<DropdownMenuGroup>
 					<DropdownMenuItem>
-						Show confirmation dialog on event drop
+						Confirm before moving events
 						<DropdownMenuShortcut>
 							<Switch
 								icon={
@@ -65,7 +75,7 @@ export function Settings() {
 						</DropdownMenuShortcut>
 					</DropdownMenuItem>
 					<DropdownMenuItem>
-						Use dot badge
+						Show event dots instead of color blocks
 						<DropdownMenuShortcut>
 							<Switch
 								icon={
@@ -83,7 +93,7 @@ export function Settings() {
 						</DropdownMenuShortcut>
 					</DropdownMenuItem>
 					<DropdownMenuItem>
-						Use 24 hour format
+						Use 24-hour time
 						<DropdownMenuShortcut>
 							<Switch
 								icon={
@@ -133,19 +143,6 @@ export function Settings() {
 							/>
 						</DropdownMenuShortcut>
 					</DropdownMenuItem>
-				</DropdownMenuGroup>
-				<DropdownMenuSeparator />
-				<DropdownMenuGroup>
-					<DropdownMenuLabel>Agenda view group by</DropdownMenuLabel>
-					<DropdownMenuRadioGroup
-						value={agendaModeGroupBy}
-						onValueChange={(value) =>
-							setAgendaModeGroupBy(value as "date" | "color")
-						}
-					>
-						<DropdownMenuRadioItem value="date">Date</DropdownMenuRadioItem>
-						<DropdownMenuRadioItem value="color">Category</DropdownMenuRadioItem>
-					</DropdownMenuRadioGroup>
 				</DropdownMenuGroup>
 			</DropdownMenuContent>
 		</DropdownMenu>

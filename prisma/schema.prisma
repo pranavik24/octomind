@@ -1,0 +1,249 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum EventColor {
+  School
+  Homework
+  Studying
+  Extracurriculars
+  Work
+  Other
+}
+
+enum TaskStatus {
+  active
+  completed
+  blocked
+  archived
+}
+
+enum TaskEstimateSource {
+  gemini
+  openai
+  ollama
+  local
+  manual
+}
+
+enum ExternalProvider {
+  google_classroom
+  google_calendar
+}
+
+enum OAuthClientKind {
+  google_classroom
+  google_calendar
+}
+
+enum ScheduleStatus {
+  scheduled
+  failed
+  locked
+}
+
+model User {
+  id            String                  @id @default(uuid()) @db.Uuid
+  name          String?
+  email         String?                 @unique
+  emailVerified DateTime?
+  image         String?
+  timezone      String                  @default("America/New_York")
+  sleepTimeMinutes Int?
+  wakeTimeMinutes  Int?
+  onboardingCompletedAt DateTime?
+  accounts      Account[]
+  sessions      Session[]
+  events        Event[]
+  tasks         Task[]
+  taskBlocks    TaskBlock[]
+  connections   ExternalConnection[]
+  oauthStates   IntegrationOAuthState[]
+  mappings      ExternalItemMapping[]
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+
+  @@map("users")
+}
+
+model Account {
+  id                       String   @id @default(uuid()) @db.Uuid
+  userId                   String   @db.Uuid
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String?
+  access_token             String?
+  expires_at               Int?
+  refresh_token_expires_in Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String?
+  session_state            String?
+  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("auth_accounts")
+}
+
+model Session {
+  id           String   @id @default(uuid()) @db.Uuid
+  sessionToken String   @unique
+  userId       String   @db.Uuid
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@map("auth_sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Event {
+  id               String                @id @default(uuid()) @db.Uuid
+  userId           String                @db.Uuid
+  title            String
+  description      String                @default("")
+  location         String?
+  color            EventColor            @default(Other)
+  startAt          DateTime
+  endAt            DateTime
+  recurrenceRule   Json?
+  externalProvider ExternalProvider?
+  externalId       String?
+  user             User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mappings         ExternalItemMapping[]
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  @@unique([userId, externalProvider, externalId])
+  @@index([userId, startAt, endAt])
+  @@map("events")
+}
+
+model Task {
+  id               String                @id @default(uuid()) @db.Uuid
+  userId           String                @db.Uuid
+  title            String
+  description      String                @default("")
+  color            EventColor            @default(Other)
+  dueAt            DateTime
+  estimatedMinutes Int
+  estimateSource   TaskEstimateSource    @default(manual)
+  estimateModel    String?
+  estimateReason   String?
+  status           TaskStatus            @default(active)
+  externalProvider ExternalProvider?
+  externalId       String?
+  externalUrl      String?
+  user             User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blocks           TaskBlock[]
+  mappings         ExternalItemMapping[]
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  @@unique([userId, externalProvider, externalId])
+  @@index([userId, dueAt, status])
+  @@map("tasks")
+}
+
+model TaskBlock {
+  id             String         @id @default(uuid()) @db.Uuid
+  taskId         String         @db.Uuid
+  userId         String         @db.Uuid
+  startAt        DateTime
+  endAt          DateTime
+  position       Int            @default(0)
+  locked         Boolean        @default(false)
+  scheduleStatus ScheduleStatus @default(scheduled)
+  failureReason  String?
+  task           Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([userId, startAt, endAt])
+  @@index([taskId])
+  @@map("task_blocks")
+}
+
+model ExternalConnection {
+  id                     String           @id @default(uuid()) @db.Uuid
+  userId                 String           @db.Uuid
+  provider               ExternalProvider
+  providerAccountId      String
+  accessTokenCiphertext  String?
+  refreshTokenCiphertext String?
+  expiresAt              DateTime?
+  refreshTokenExpiresAt  DateTime?
+  tokenType              String?
+  scopes                 String[]         @default([])
+  connectedAt            DateTime         @default(now())
+  revokedAt              DateTime?
+  oauthClientKind        OAuthClientKind  @default(google_classroom)
+  healthy                Boolean          @default(true)
+  lastError              String?
+  lastSyncedAt           DateTime?
+  user                   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+
+  @@unique([userId, provider, providerAccountId])
+  @@index([userId, provider])
+  @@map("external_connections")
+}
+
+model IntegrationOAuthState {
+  id                     String           @id @default(uuid()) @db.Uuid
+  stateHash              String           @unique
+  pkceVerifierCiphertext String
+  nonce                  String
+  userId                 String           @db.Uuid
+  provider               ExternalProvider
+  expiresAt              DateTime
+  user                   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt              DateTime         @default(now())
+
+  @@index([userId, provider])
+  @@index([expiresAt])
+  @@map("integration_oauth_states")
+}
+
+model ExternalItemMapping {
+  id               String           @id @default(uuid()) @db.Uuid
+  userId           String           @db.Uuid
+  provider         ExternalProvider
+  externalCourseId String?
+  externalItemId   String
+  eventId          String?          @db.Uuid
+  taskId           String?          @db.Uuid
+  lastSeenAt       DateTime         @default(now())
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event            Event?           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  task             Task?            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@unique([userId, provider, externalCourseId, externalItemId])
+  @@index([taskId])
+  @@index([eventId])
+  @@map("external_item_mappings")
+}

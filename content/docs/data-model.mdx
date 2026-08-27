@@ -1,0 +1,37 @@
+---
+title: Persistence Data Model
+description: Database entities planned for auth, calendar persistence, task scheduling, and Google integrations.
+---
+
+# Persistence Data Model
+
+The first persistence target is PostgreSQL. The canonical SQL draft lives in `database/schema.sql`; TypeScript contracts live in `src/modules/persistence/data-model.ts`.
+
+## Core ownership
+
+Every user-owned row carries `user_id`. API routes should always scope reads and writes by the authenticated user before returning calendar data.
+
+## Auth
+
+`users`, `auth_accounts`, `auth_sessions`, and `verification_tokens` are shaped to support Auth.js or a similar OAuth adapter later. Google OAuth tokens should be stored only server-side in `auth_accounts`.
+
+## Calendar entities
+
+`events` stores user-created events plus optional Google Calendar imports. Recurrence is currently a JSON rule so the existing calendar recurrence shape can be persisted before choosing a final recurrence library.
+
+`tasks` stores due dates, task estimates, estimate source/model/reason, current status, and optional external IDs for Google Classroom imports.
+
+`task_blocks` stores scheduled work blocks separately from tasks. This lets the scheduler split a long task into chunks, lock manually adjusted blocks, and recompute task timing without losing task metadata.
+
+## External integrations
+
+`external_connections` records which Google products a user has connected and when they were last synced.
+
+`external_item_mappings` prevents duplicate imports. For Google Classroom, the unique identity should be `user_id + provider + external_course_id + external_item_id`.
+
+## Important constraints
+
+- Task estimates must be 30-minute intervals from 30 minutes to 12 hours.
+- Events and task blocks must have `start_at < end_at`.
+- External mappings point to exactly one local record: either an event or a task.
+- Duplicate external imports are blocked with unique constraints.

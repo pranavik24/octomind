@@ -47,7 +47,7 @@ export function DateNavigator({ view, events }: IProps) {
 		<div className="space-y-0.5">
 			<div className="flex items-center gap-2">
 				<motion.span
-					className="text-lg font-semibold"
+					className="text-lg font-semibold text-foreground"
 					initial={{ x: -20, opacity: 0 }}
 					animate={{ x: 0, opacity: 1 }}
 					transition={transition}
@@ -72,7 +72,7 @@ export function DateNavigator({ view, events }: IProps) {
 				<MotionButton
 					variant="outline"
 					size="icon"
-					className="h-6 w-6"
+					className="h-7 w-7 border-border bg-card text-foreground hover:bg-accent"
 					onClick={handlePrevious}
 					variants={buttonHover}
 					whileHover="hover"
@@ -93,7 +93,7 @@ export function DateNavigator({ view, events }: IProps) {
 				<MotionButton
 					variant="outline"
 					size="icon"
-					className="h-6 w-6"
+					className="h-7 w-7 border-border bg-card text-foreground hover:bg-accent"
 					onClick={handleNext}
 					variants={buttonHover}
 					whileHover="hover"

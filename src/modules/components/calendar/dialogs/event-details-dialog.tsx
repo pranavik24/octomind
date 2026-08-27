@@ -15,7 +15,10 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCalendar } from "@/modules/components/calendar/contexts/calendar-context";
-import { AddEditEventDialog } from "@/modules/components/calendar/dialogs/add-edit-event-dialog";
+import {
+	AddEditEventDialog,
+	AddEditTaskDialog,
+} from "@/modules/components/calendar/dialogs/add-edit-event-dialog";
 import { formatTime } from "@/modules/components/calendar/helpers";
 import type { IEvent } from "@/modules/components/calendar/interfaces";
 
@@ -28,19 +31,22 @@ export function EventDetailsDialog({ event, children }: IProps) {
 	const startDate = parseISO(event.startDate);
 	const endDate = parseISO(event.endDate);
 	const { use24HourFormat, removeEvent, removeTask, tasks } = useCalendar();
+	const taskId = event.taskId ?? event.id;
+	const relatedTask = tasks.find((task) => task.id === taskId);
+	const isTask = !!relatedTask;
 
-	const deleteEvent = (eventId: number) => {
+	const deleteEvent = async (eventId: string) => {
 		try {
-			const isTask = tasks.some((task) => task.id === eventId);
 			if (isTask) {
-				removeTask(eventId);
+				await removeTask(taskId);
 				toast.success("Task deleted successfully.");
 			} else {
-				removeEvent(eventId);
+				await removeEvent(eventId);
 				toast.success("Event deleted successfully.");
 			}
-		} catch {
-			toast.error("Error deleting event.");
+		} catch (error) {
+			console.error("Error deleting item:", error);
+			toast.error("Error deleting item.");
 		}
 	};
 
@@ -98,13 +104,19 @@ export function EventDetailsDialog({ event, children }: IProps) {
 					</div>
 				</ScrollArea>
 				<div className="flex justify-end gap-2">
-					<AddEditEventDialog event={event}>
-						<Button variant="outline">Edit</Button>
-					</AddEditEventDialog>
+					{isTask ? (
+						<AddEditTaskDialog task={relatedTask}>
+							<Button variant="outline">Edit</Button>
+						</AddEditTaskDialog>
+					) : (
+						<AddEditEventDialog event={event}>
+							<Button variant="outline">Edit</Button>
+						</AddEditEventDialog>
+					)}
 					<Button
 						variant="destructive"
 						onClick={() => {
-							deleteEvent(event.id);
+							void deleteEvent(event.id);
 						}}
 					>
 						Delete

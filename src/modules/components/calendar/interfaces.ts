@@ -1,3 +1,7 @@
+import type {
+	ScheduledBlock,
+	TaskScheduleStatus,
+} from "@/modules/components/calendar/scheduling";
 import type { TEventColor } from "@/modules/components/calendar/types";
 
 export interface IUser {
@@ -7,7 +11,8 @@ export interface IUser {
 }
 
 export interface IEvent {
-	id: number;
+	id: string;
+	taskId?: string;
 	startDate: string;
 	endDate: string;
 	title: string;
@@ -26,13 +31,17 @@ export interface IEvent {
 		until?: string; // optional ISO date string
 		// optional list of weekdays for weekly recurrences (0 = Sunday .. 6 = Saturday)
 		byweekday?: number[];
+		// position of a weekday in the month (1 = first, 5 = last when needed)
+		bysetpos?: number;
 	};
 }
 
 export interface ITask {
-	id: number;
+	id: string;
 	dueDate: string;
 	estimatedHours?: number;
+	scheduledBlocks?: ScheduledBlock[];
+	scheduleStatus?: TaskScheduleStatus;
 	title: string;
 	color: TEventColor;
 	description: string;

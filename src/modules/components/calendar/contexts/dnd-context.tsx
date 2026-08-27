@@ -5,14 +5,14 @@ import React, {
 	type ReactNode,
 	useCallback,
 	useContext,
+	useMemo,
 	useRef,
 	useState,
-	useMemo,
 } from "react";
 import { toast } from "sonner";
 import { useCalendar } from "@/modules/components/calendar/contexts/calendar-context";
-import type { IEvent } from "@/modules/components/calendar/interfaces";
 import { DndConfirmationDialog } from "@/modules/components/calendar/dialogs/dnd-confirmation-dialog";
+import type { IEvent } from "@/modules/components/calendar/interfaces";
 
 interface PendingDropData {
 	event: IEvent;
@@ -59,7 +59,8 @@ export function DndProvider({
 		useState<PendingDropData | null>(null);
 
 	const onEventDroppedRef = useRef<
-		((event: IEvent, newStartDate: Date, newEndDate: Date) => void) | null
+		| ((event: IEvent, newStartDate: Date, newEndDate: Date) => Promise<void>)
+		| null
 	>(null);
 
 	const startDrag = useCallback((event: IEvent) => {
@@ -130,7 +131,7 @@ export function DndProvider({
 				// Instantly update event if user doesn't want confirmation
 				const callback = onEventDroppedRef.current;
 				if (callback) {
-					callback(draggedEvent, newStart, newEnd);
+					void callback(draggedEvent, newStart, newEnd);
 				}
 				endDrag();
 			}
@@ -143,7 +144,7 @@ export function DndProvider({
 
 		const callback = onEventDroppedRef.current;
 		if (callback) {
-			callback(
+			void callback(
 				pendingDropData.event,
 				pendingDropData.newStartDate,
 				pendingDropData.newEndDate,
@@ -162,14 +163,14 @@ export function DndProvider({
 
 	// Default event update handler
 	const handleEventUpdate = useCallback(
-		(event: IEvent, newStartDate: Date, newEndDate: Date) => {
+		async (event: IEvent, newStartDate: Date, newEndDate: Date) => {
 			try {
 				const updatedEvent = {
 					...event,
 					startDate: newStartDate.toISOString(),
 					endDate: newEndDate.toISOString(),
 				};
-				updateEvent(updatedEvent);
+				await updateEvent(updatedEvent);
 				toast.success("Event updated successfully");
 			} catch {
 				toast.error("Failed to update event");
@@ -210,7 +211,6 @@ export function DndProvider({
 			handleEventDrop,
 			handleConfirmDrop,
 			handleCancelDrop,
-			setShowConfirmation,
 		],
 	);
 
