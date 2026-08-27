@@ -92,16 +92,16 @@ export function OnboardingForm() {
 	return (
 		<form
 			onSubmit={submit}
-			className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
+			className="ocean-shell overflow-hidden rounded-xl border"
 		>
-			<section className="border-b border-slate-200 p-5 md:p-6">
+			<section className="border-b border-border p-5 md:p-6">
 				<div className="mb-5 flex items-start gap-3">
-					<div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-700">
+					<div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground">
 						<GraduationCap className="size-5" />
 					</div>
 					<div>
-						<h2 className="font-semibold text-slate-950">School schedule</h2>
-						<p className="text-sm text-slate-600">
+						<h2 className="font-semibold text-foreground">School schedule</h2>
+						<p className="text-sm text-muted-foreground">
 							Choose your regular class days and hours.
 						</p>
 					</div>
@@ -120,8 +120,8 @@ export function OnboardingForm() {
 								onClick={() => toggleSchoolDay(day.value)}
 								className={`h-10 rounded-md border text-sm font-medium transition-colors ${
 									selected
-										? "border-slate-950 bg-slate-950 text-white"
-										: "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+										? "border-primary bg-primary text-primary-foreground"
+										: "border-border bg-card text-foreground hover:bg-accent"
 								}`}
 							>
 								{day.short}
@@ -156,12 +156,12 @@ export function OnboardingForm() {
 
 			<section className="p-5 md:p-6">
 				<div className="mb-5 flex items-start gap-3">
-					<div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-indigo-50 text-indigo-700">
+					<div className="flex size-9 shrink-0 items-center justify-center rounded-md reef-studying">
 						<Moon className="size-5" />
 					</div>
 					<div>
-						<h2 className="font-semibold text-slate-950">Sleep schedule</h2>
-						<p className="text-sm text-slate-600">
+						<h2 className="font-semibold text-foreground">Sleep schedule</h2>
+						<p className="text-sm text-muted-foreground">
 							Tasks will stay outside these protected hours.
 						</p>
 					</div>
@@ -189,10 +189,10 @@ export function OnboardingForm() {
 						/>
 					</div>
 				</div>
-				<p className="mt-4 text-xs text-slate-500">Timezone: {timezone}</p>
+				<p className="mt-4 text-xs text-muted-foreground">Timezone: {timezone}</p>
 			</section>
 
-			<footer className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+			<footer className="flex flex-col gap-3 border-t border-border bg-secondary p-4 sm:flex-row sm:items-center sm:justify-between">
 				{error ? (
 					<p className="text-sm text-red-700" role="alert">
 						{error}

@@ -25,7 +25,7 @@ async function requestJson<T>(
 				? data.error
 				: typeof data?.error?.message === "string"
 					? data.error.message
-					: "Calendar persistence failed.";
+					: `Calendar persistence failed (HTTP ${response.status}).`;
 		throw new Error(message);
 	}
 

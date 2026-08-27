@@ -11,37 +11,23 @@ import { formatTime } from "@/modules/components/calendar/helpers";
 import type { IEvent } from "@/modules/components/calendar/interfaces";
 
 const calendarWeekEventCardVariants = cva(
-	"flex select-none flex-col gap-0.5 truncate whitespace-nowrap rounded-md border px-2 py-1.5 text-xs focus-visible:outline-offset-2",
+	"reef-chip flex select-none flex-col gap-0.5 truncate whitespace-nowrap rounded-md border px-2 py-1.5 text-xs shadow-[0_1px_0_var(--coast-shadow)] focus-visible:outline-offset-2",
 	{
 		variants: {
 			color: {
-				// Colored variants
-				School:
-					"border-indigo-200 bg-indigo-100/50 text-indigo-700 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300 dark:hover:bg-indigo-950",
-				Extracurriculars:
-					"border-green-200 bg-green-100/50 text-green-700 hover:bg-green-100 dark:border-green-800 dark:bg-green-950/50 dark:text-green-300 dark:hover:bg-green-950",
-				Other:
-					"border-slate-200 bg-slate-100/50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-300 dark:hover:bg-slate-900",
-				Homework:
-					"border-cyan-200 bg-cyan-100/50 text-cyan-700 hover:bg-cyan-100 dark:border-cyan-800 dark:bg-cyan-950/50 dark:text-cyan-300 dark:hover:bg-cyan-950",
-				Studying:
-					"border-violet-200 bg-violet-100/50 text-violet-700 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-300 dark:hover:bg-violet-950",
-				Work:
-					"border-amber-200 bg-amber-100/50 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-300 dark:hover:bg-amber-950",
-
-				// Dot variants
-				"School-dot":
-					"border-border bg-card text-foreground hover:bg-accent [&_svg]:fill-indigo-600 dark:[&_svg]:fill-indigo-500",
+				School: "reef-school",
+				Extracurriculars: "reef-extracurriculars",
+				Other: "reef-other",
+				Homework: "reef-homework",
+				Studying: "reef-studying",
+				Work: "reef-work",
+				"School-dot": "border-border bg-card text-foreground hover:bg-accent [&_svg]:fill-[var(--reef-school-border)]",
 				"Extracurriculars-dot":
-					"border-border bg-card text-foreground hover:bg-accent [&_svg]:fill-green-600 dark:[&_svg]:fill-green-500",
-				"Other-dot":
-					"border-border bg-card text-foreground hover:bg-accent [&_svg]:fill-slate-600 dark:[&_svg]:fill-slate-500",
-				"Work-dot":
-					"border-border bg-card text-foreground hover:bg-accent [&_svg]:fill-amber-600 dark:[&_svg]:fill-amber-500",
-				"Studying-dot":
-					"border-border bg-card text-foreground hover:bg-accent [&_svg]:fill-violet-600 dark:[&_svg]:fill-violet-500",
-				"Homework-dot":
-					"border-border bg-card text-foreground hover:bg-accent [&_svg]:fill-cyan-600 dark:[&_svg]:fill-cyan-500",
+					"border-border bg-card text-foreground hover:bg-accent [&_svg]:fill-[var(--reef-extracurriculars-border)]",
+				"Other-dot": "border-border bg-card text-foreground hover:bg-accent [&_svg]:fill-[var(--reef-other-border)]",
+				"Work-dot": "border-border bg-card text-foreground hover:bg-accent [&_svg]:fill-[var(--reef-work-border)]",
+				"Studying-dot": "border-border bg-card text-foreground hover:bg-accent [&_svg]:fill-[var(--reef-studying-border)]",
+				"Homework-dot": "border-border bg-card text-foreground hover:bg-accent [&_svg]:fill-[var(--reef-homework-border)]",
 			},
 		},
 		defaultVariants: {

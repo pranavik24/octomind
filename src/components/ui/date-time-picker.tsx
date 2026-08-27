@@ -21,6 +21,7 @@ import {
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useCalendar } from "@/modules/components/calendar/contexts/calendar-context";
+import { mergeDatePreservingTime } from "@/modules/components/calendar/date-time-utils";
 
 interface DatePickerProps<TFieldValues extends FieldValues = FieldValues> {
 	// accept a flexible form/field types to support both events (start/end) and tasks (dueDate)
@@ -40,7 +41,14 @@ export function DateTimePicker<TFieldValues extends FieldValues = FieldValues>({
 
 	function handleDateSelect(date: Date | undefined) {
 		if (date) {
-			form.setValue(field.name, date as never);
+			const currentValue = form.getValues(field.name) as unknown;
+			form.setValue(
+				field.name,
+				mergeDatePreservingTime(
+					date,
+					currentValue instanceof Date ? currentValue : undefined,
+				) as never,
+			);
 		}
 	}
 

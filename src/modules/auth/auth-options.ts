@@ -30,9 +30,10 @@ export const authOptions: NextAuthOptions = {
 				]
 			: [],
 	callbacks: {
-		session({ session, user }) {
-			if (session.user && user?.id) {
-				session.user.id = user.id;
+		session({ session, user, token }) {
+			const userId = user?.id ?? token.sub;
+			if (session.user && userId) {
+				session.user.id = userId;
 			}
 			return session;
 		},

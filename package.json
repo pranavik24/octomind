@@ -3,14 +3,14 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
-		"dev": "next dev --turbopack",
+		"dev": "next dev --hostname 127.0.0.1 --port 3002",
 		"build": "next build",
 		"start": "next start",
 		"test": "pnpm run test:core && pnpm run test:auth && pnpm run test:integrations && pnpm run test:security",
-		"test:core": "node --experimental-strip-types --test src/modules/task-estimate/estimator.test.ts src/app/api/task-estimate/route.test.ts src/modules/components/calendar/calendar-persistence.test.ts src/modules/components/calendar/scheduling.test.ts src/modules/components/calendar/scheduling.test.mjs src/modules/components/calendar/recurrence.test.ts src/modules/onboarding/schedule.test.ts src/modules/integrations/google-classroom/classroom-import.test.ts src/modules/persistence/calendar-mappers.test.ts",
+		"test:core": "node --experimental-strip-types --test src/modules/task-estimate/estimator.test.ts src/app/api/task-estimate/route.test.ts src/modules/components/calendar/calendar-persistence.test.ts src/modules/components/calendar/date-time-utils.test.ts src/modules/components/calendar/scheduling.test.ts src/modules/components/calendar/scheduling.test.mjs src/modules/components/calendar/scheduling-insertion.test.mjs src/modules/components/calendar/recurrence.test.ts src/modules/onboarding/schedule.test.ts src/modules/integrations/google-classroom/classroom-import.test.ts src/modules/persistence/calendar-mappers.test.ts src/components/landing/water-ripple-canvas.test.ts",
 		"test:auth": "node --test src/app/auth-boundary.test.mjs",
 		"test:integrations": "node --experimental-strip-types --loader ./tests/alias-loader.mjs --test src/modules/auth/auth-options.test.ts src/modules/integrations/google-classroom/classroom-client.test.ts src/modules/integrations/google-classroom/handlers.test.ts src/modules/integrations/google-classroom/integration-rate-limit.test.ts src/modules/integrations/google-classroom/oauth.test.ts src/modules/integrations/google-classroom/oauth-storage.test.ts src/modules/integrations/google-classroom/routes.test.ts src/modules/security/token-crypto.test.ts src/app/api/integrations/google-classroom/sync/route.test.ts src/app/settings/integrations/integration-settings.test.ts",
-		"test:security": "node --experimental-strip-types --loader ./tests/alias-loader.mjs --test src/modules/api/calendar-security.test.ts src/modules/auth/secure-prisma-adapter.test.ts src/modules/persistence/calendar-repository.security.test.ts src/app/api/events/events-security.test.ts src/app/api/onboarding/handlers.test.ts src/app/api/tasks/tasks-security.test.ts",
+		"test:security": "node --experimental-strip-types --loader ./tests/alias-loader.mjs --test src/modules/api/calendar-security.test.ts src/modules/api/calendar-insertion.test.ts src/modules/auth/secure-prisma-adapter.test.ts src/modules/persistence/calendar-repository.security.test.ts src/modules/persistence/calendar-repository.insertion.test.ts src/app/api/events/events-security.test.ts src/app/api/onboarding/handlers.test.ts src/app/api/tasks/tasks-security.test.ts",
 		"lint": "next lint",
 		"registry:build": "shadcn build",
 		"postinstall": "fumadocs-mdx"

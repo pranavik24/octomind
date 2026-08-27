@@ -60,6 +60,8 @@ import { TaskSchedulingError } from "@/modules/components/calendar/scheduling";
 import {
 	eventSchema,
 	type TEventFormData,
+	taskSchema,
+	type TTaskFormData,
 } from "@/modules/components/calendar/schemas";
 import { EventBullet } from "@/modules/components/calendar/views/month-view/event-bullet";
 
@@ -82,13 +84,7 @@ interface TaskEstimateResponse {
 
 type EventFormValues = TEventFormData & { location: string };
 
-type TaskFormValues = {
-	title: string;
-	description: string;
-	dueDate: Date;
-	estimatedHours?: number;
-	color: ITask["color"];
-};
+type TaskFormValues = TTaskFormData;
 
 interface PendingTaskConflict {
 	error: TaskSchedulingError;
@@ -179,6 +175,7 @@ export function AddEditEventDialog({
 		try {
 			const formattedEvent: IEvent = {
 				...values,
+				description: values.description ?? "",
 				startDate: format(values.startDate, "yyyy-MM-dd'T'HH:mm:ss"),
 				endDate: format(values.endDate, "yyyy-MM-dd'T'HH:mm:ss"),
 				id: isEditing ? event.id : crypto.randomUUID(),
@@ -241,7 +238,9 @@ export function AddEditEventDialog({
 			form.reset();
 		} catch (error) {
 			console.error(`Error ${isEditing ? "editing" : "adding"} event:`, error);
-			toast.error(`Failed to ${isEditing ? "edit" : "add"} event`);
+			const message =
+				error instanceof Error ? `: ${error.message}` : ". Please try again.";
+			toast.error(`Failed to ${isEditing ? "edit" : "add"} event${message}`);
 		}
 	};
 	const selectedStartDate = form.watch("startDate");
@@ -253,13 +252,13 @@ export function AddEditEventDialog({
 	return (
 		<Modal open={isOpen} onOpenChange={onToggle} modal={false}>
 			<ModalTrigger asChild>{children}</ModalTrigger>
-			<ModalContent>
+			<ModalContent className="max-h-[calc(100dvh-1.5rem)] overflow-hidden lg:max-w-2xl">
 				<ModalHeader>
-					<ModalTitle>{isEditing ? "Edit Event" : "Add New Event"}</ModalTitle>
+					<ModalTitle>{isEditing ? "Edit event" : "Add event"}</ModalTitle>
 					<ModalDescription>
 						{isEditing
-							? "Modify your existing event."
-							: "Create a new event for your calendar."}
+							? "Update a class, club, work shift, or other time block."
+							: "Add time that homework should schedule around."}
 					</ModalDescription>
 				</ModalHeader>
 
@@ -267,7 +266,7 @@ export function AddEditEventDialog({
 					<form
 						id="event-form"
 						onSubmit={form.handleSubmit(onSubmit)}
-						className="grid gap-4 py-4"
+						className="grid gap-3 py-2 md:grid-cols-2"
 					>
 						<FormField
 							control={form.control}
@@ -275,14 +274,14 @@ export function AddEditEventDialog({
 							render={({ field, fieldState }) => (
 								<FormItem>
 									<FormLabel htmlFor="title" className="required">
-										Title
+										Event name
 									</FormLabel>
 									<FormControl>
 										<Input
 											id="title"
-											placeholder="Enter a title"
+											placeholder="Biology lab"
 											{...field}
-											className={fieldState.invalid ? "border-red-500" : ""}
+											className={fieldState.invalid ? "border-destructive" : ""}
 										/>
 									</FormControl>
 									<FormMessage />
@@ -293,16 +292,14 @@ export function AddEditEventDialog({
 							control={form.control}
 							name="location"
 							render={({ field, fieldState }) => (
-								<FormItem>
-									<FormLabel className="required" htmlFor="location">
-										Location
-									</FormLabel>
+								<FormItem className="md:col-span-2">
+									<FormLabel htmlFor="location">Location</FormLabel>
 									<FormControl>
 										<Input
 											id="location"
-											placeholder="Enter a location"
+											placeholder="Room 204, library, or optional"
 											{...field}
-											className={fieldState.invalid ? "border-red-500" : ""}
+											className={fieldState.invalid ? "border-destructive" : ""}
 										/>
 									</FormControl>
 									<FormMessage />
@@ -327,13 +324,13 @@ export function AddEditEventDialog({
 							control={form.control}
 							name="color"
 							render={({ field, fieldState }) => (
-								<FormItem>
+								<FormItem className="md:col-span-2">
 									<FormLabel className="required">Category</FormLabel>
 									<FormControl>
 										<Select value={field.value} onValueChange={field.onChange}>
 											<SelectTrigger
 												className={`w-full ${
-													fieldState.invalid ? "border-red-500" : ""
+													fieldState.invalid ? "border-destructive" : ""
 												}`}
 											>
 												<SelectValue placeholder="Select a category" />
@@ -399,13 +396,13 @@ export function AddEditEventDialog({
 							control={form.control}
 							name="description"
 							render={({ field, fieldState }) => (
-								<FormItem>
-									<FormLabel> Description</FormLabel>
+								<FormItem className="md:col-span-2">
+									<FormLabel>Description</FormLabel>
 									<FormControl>
 										<Textarea
 											{...field}
-											placeholder="Enter a description"
-											className={fieldState.invalid ? "border-red-500" : ""}
+											placeholder="Notes for this event, optional"
+											className={fieldState.invalid ? "border-destructive" : ""}
 										/>
 									</FormControl>
 									<FormMessage />
@@ -414,14 +411,14 @@ export function AddEditEventDialog({
 						/>
 					</form>
 				</Form>
-				<ModalFooter className="flex justify-end gap-2">
+				<ModalFooter className="flex justify-end gap-2 pt-2">
 					<ModalClose asChild>
 						<Button type="button" variant="outline">
 							Cancel
 						</Button>
 					</ModalClose>
 					<Button form="event-form" type="submit">
-						{isEditing ? "Save Changes" : "Create Event"}
+						{isEditing ? "Save event" : "Add event"}
 					</Button>
 				</ModalFooter>
 			</ModalContent>
@@ -504,7 +501,7 @@ function CustomRecurrenceModal({
 			}}
 			modal={true}
 		>
-			<ModalContent>
+			<ModalContent className="max-h-[calc(100dvh-1.5rem)] overflow-hidden lg:max-w-2xl">
 				<ModalHeader>
 					<ModalTitle>Custom recurrence</ModalTitle>
 				</ModalHeader>
@@ -554,7 +551,7 @@ function CustomRecurrenceModal({
 										type="button"
 										aria-label={name}
 										aria-pressed={localWeekdays.includes(day)}
-										className={`flex h-8 w-8 items-center justify-center rounded-full ${localWeekdays.includes(day) ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+										className={`flex h-9 w-9 items-center justify-center rounded-md border text-sm font-medium ${localWeekdays.includes(day) ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-muted-foreground"}`}
 									>
 										{label}
 									</button>
@@ -668,10 +665,8 @@ export function AddEditTaskDialog({
 		};
 	}, [startDate, startTime, task, isEditing]);
 
-	// Use a flexible form type for tasks to avoid mismatched defaultValues shape
-	// NOTE: We intentionally do NOT use `eventSchema` for tasks because the
-	// event schema expects `startDate`/`endDate` while tasks use `dueDate`.
 	const form = useForm<TaskFormValues>({
+		resolver: zodResolver(taskSchema),
 		defaultValues: {
 			title: task?.title ?? "",
 			description: task?.description ?? "",
@@ -881,7 +876,9 @@ export function AddEditTaskDialog({
 			}
 
 			console.error(`Error ${isEditing ? "editing" : "adding"} task:`, error);
-			toast.error(`Failed to ${isEditing ? "edit" : "add"} task`);
+			const message =
+				error instanceof Error ? `: ${error.message}` : ". Please try again.";
+			toast.error(`Failed to ${isEditing ? "edit" : "add"} task${message}`);
 		}
 	};
 
@@ -889,13 +886,15 @@ export function AddEditTaskDialog({
 		<>
 			<Modal open={isOpen} onOpenChange={onToggle} modal={false}>
 				<ModalTrigger asChild>{children}</ModalTrigger>
-				<ModalContent>
+				<ModalContent className="max-h-[calc(100dvh-1.5rem)] overflow-hidden bg-white text-slate-950 dark:bg-white dark:text-slate-950 lg:max-w-2xl">
 					<ModalHeader>
-						<ModalTitle>{isEditing ? "Edit Task" : "Add New Task"}</ModalTitle>
-						<ModalDescription>
+						<ModalTitle className="text-slate-950">
+							{isEditing ? "Edit homework" : "Add homework"}
+						</ModalTitle>
+						<ModalDescription className="text-slate-600">
 							{isEditing
-								? "Modify your existing task."
-								: "Create a new task for your calendar."}
+								? "Update the deadline, estimate, or details for this task."
+								: "Add a task so Octomind can schedule work time before it is due."}
 						</ModalDescription>
 					</ModalHeader>
 
@@ -903,22 +902,43 @@ export function AddEditTaskDialog({
 						<form
 							id="task-form"
 							onSubmit={form.handleSubmit(onSubmit)}
-							className="grid gap-4 py-4"
+							className="grid gap-3 py-2 md:grid-cols-2"
 						>
 							<FormField
 								control={form.control}
 								name="title"
 								render={({ field, fieldState }) => (
-									<FormItem>
+									<FormItem className="md:col-span-2">
 										<FormLabel htmlFor="title" className="required">
-											Title
+											Task name
 										</FormLabel>
 										<FormControl>
 											<Input
 												id="title"
-												placeholder="Enter a title"
+												placeholder="Finish history outline"
 												{...field}
-												className={fieldState.invalid ? "border-red-500" : ""}
+												className={
+													fieldState.invalid ? "border-destructive" : ""
+												}
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name="description"
+								render={({ field, fieldState }) => (
+									<FormItem className="md:col-span-2">
+										<FormLabel>Description</FormLabel>
+										<FormControl>
+											<Textarea
+												{...field}
+												placeholder="Notes, rubric details, or page numbers"
+												className={
+													fieldState.invalid ? "border-destructive" : ""
+												}
 											/>
 										</FormControl>
 										<FormMessage />
@@ -932,7 +952,7 @@ export function AddEditTaskDialog({
 									<DateTimePicker form={form} field={field} />
 								)}
 							/>
-							<div className="flex items-center gap-2">
+							<div className="flex items-center gap-2 md:col-span-2">
 								<input
 									id="task-eod"
 									type="checkbox"
@@ -954,14 +974,14 @@ export function AddEditTaskDialog({
 									}}
 									className="size-4 rounded border-input"
 								/>
-								<Label htmlFor="task-eod">EOD (11:59 PM)</Label>
+								<Label htmlFor="task-eod">Due by the end of the day</Label>
 							</div>
 							<FormField
 								control={form.control}
 								name="estimatedHours"
 								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Estimated Duration (hours)</FormLabel>
+									<FormItem className="md:col-span-2">
+										<FormLabel>How long will this take?</FormLabel>
 										<FormControl>
 											<div className="flex items-center gap-2">
 												<Input
@@ -990,14 +1010,14 @@ export function AddEditTaskDialog({
 														setEstimateRefreshKey((key) => key + 1);
 													}}
 												>
-													{isLlmEstimating ? "Estimating..." : "Auto Estimate"}
+													{isLlmEstimating ? "Estimating..." : "Estimate time"}
 												</Button>
 											</div>
 										</FormControl>
 										<p className="text-xs text-muted-foreground">
 											{estimateDetails
 												? `${estimateLabel}: ${estimateDetails.reason}`
-												: "Based on task title and description. Range: 0.5h to 8h."}
+												: "Use your own estimate or let Octomind suggest one from the task details. Range: 0.5 to 8 hours."}
 										</p>
 										<FormMessage />
 									</FormItem>
@@ -1008,7 +1028,7 @@ export function AddEditTaskDialog({
 								control={form.control}
 								name="color"
 								render={({ field, fieldState }) => (
-									<FormItem>
+									<FormItem className="md:col-span-2">
 										<FormLabel className="required">Category</FormLabel>
 										<FormControl>
 											<Select
@@ -1017,7 +1037,7 @@ export function AddEditTaskDialog({
 											>
 												<SelectTrigger
 													className={`w-full ${
-														fieldState.invalid ? "border-red-500" : ""
+														fieldState.invalid ? "border-destructive" : ""
 													}`}
 												>
 													<SelectValue placeholder="Select a category" />
@@ -1038,33 +1058,16 @@ export function AddEditTaskDialog({
 									</FormItem>
 								)}
 							/>
-							<FormField
-								control={form.control}
-								name="description"
-								render={({ field, fieldState }) => (
-									<FormItem>
-										<FormLabel> Description</FormLabel>
-										<FormControl>
-											<Textarea
-												{...field}
-												placeholder="Enter a description"
-												className={fieldState.invalid ? "border-red-500" : ""}
-											/>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
 						</form>
 					</Form>
-					<ModalFooter className="flex justify-end gap-2">
+					<ModalFooter className="flex justify-end gap-2 pt-2">
 						<ModalClose asChild>
 							<Button type="button" variant="outline">
 								Cancel
 							</Button>
 						</ModalClose>
 						<Button form="task-form" type="submit">
-							{isEditing ? "Save Changes" : "Create Task"}
+							{isEditing ? "Save homework" : "Add homework"}
 						</Button>
 					</ModalFooter>
 				</ModalContent>

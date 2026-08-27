@@ -16,9 +16,9 @@ export default async function CalendarPage() {
 	if (!(await onboardingCompletedForUser(userId))) redirect("/onboarding");
 
 	return (
-		<main className="min-h-screen bg-slate-50">
-			<div className="mx-auto w-full max-w-screen-2xl px-4 py-4 md:px-6">
-				<header className="mb-4 flex items-center justify-between gap-4">
+		<main className="ocean-page h-dvh overflow-hidden">
+			<div className="mx-auto flex h-full w-full max-w-screen-2xl flex-col px-3 py-3 md:px-4">
+				<header className="mb-3 flex shrink-0 items-center justify-between gap-4">
 					<div className="flex min-w-0 items-center gap-3">
 						<Image
 							src="/final.OctoMind.transparent.png"
@@ -28,7 +28,7 @@ export default async function CalendarPage() {
 							className="size-12 shrink-0 object-contain"
 							priority
 						/>
-						<h1 className="truncate text-2xl font-semibold text-slate-950">
+						<h1 className="truncate text-2xl font-semibold text-foreground">
 							Octomind
 						</h1>
 					</div>

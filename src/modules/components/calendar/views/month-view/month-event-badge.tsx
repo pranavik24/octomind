@@ -7,35 +7,26 @@ import { EventDetailsDialog } from "@/modules/components/calendar/dialogs/event-
 import { DraggableEvent } from "@/modules/components/calendar/dnd/draggable-event";
 import { formatTime } from "@/modules/components/calendar/helpers";
 import type { IEvent } from "@/modules/components/calendar/interfaces";
-import {EventBullet} from "@/modules/components/calendar/views/month-view/event-bullet";
+import { EventBullet } from "@/modules/components/calendar/views/month-view/event-bullet";
 
 const eventBadgeVariants = cva(
-	"mx-1 flex size-auto h-6.5 select-none items-center justify-between gap-1.5 truncate whitespace-nowrap rounded-md border px-2 text-xs",
+	"reef-chip mx-1 flex size-auto h-5 select-none items-center justify-between gap-1 truncate whitespace-nowrap rounded-md border px-1.5 text-xs shadow-[0_1px_0_var(--coast-shadow)]",
 	{
 		variants: {
 			color: {
-				// Colored variants
-				School:
-					"border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950 dark:text-indigo-300",
-				Extracurriculars:
-					"border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-300",
-				Other:
-					"border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300",
-				Homework:
-					"border-cyan-200 bg-cyan-50 text-cyan-700 dark:border-cyan-800 dark:bg-cyan-950 dark:text-cyan-300",
-				Studying:
-					"border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-300",
-				Work:
-					"border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300",
-
-				// Dot variants
-				"School-dot": "bg-bg-secondary text-t-primary [&_svg]:fill-indigo-600",
+				School: "reef-school",
+				Extracurriculars: "reef-extracurriculars",
+				Other: "reef-other",
+				Homework: "reef-homework",
+				Studying: "reef-studying",
+				Work: "reef-work",
+				"School-dot": "border-border bg-card text-foreground [&_svg]:fill-[var(--reef-school-border)]",
 				"Extracurriculars-dot":
-					"bg-bg-secondary text-t-primary [&_svg]:fill-green-600",
-				"Other-dot": "bg-bg-secondary text-t-primary [&_svg]:fill-slate-600",
-				"Work-dot": "bg-bg-secondary text-t-primary [&_svg]:fill-amber-600",
-				"Studying-dot": "bg-bg-secondary text-t-primary [&_svg]:fill-violet-600",
-				"Homework-dot": "bg-bg-secondary text-t-primary [&_svg]:fill-cyan-600",
+					"border-border bg-card text-foreground [&_svg]:fill-[var(--reef-extracurriculars-border)]",
+				"Other-dot": "border-border bg-card text-foreground [&_svg]:fill-[var(--reef-other-border)]",
+				"Work-dot": "border-border bg-card text-foreground [&_svg]:fill-[var(--reef-work-border)]",
+				"Studying-dot": "border-border bg-card text-foreground [&_svg]:fill-[var(--reef-studying-border)]",
+				"Homework-dot": "border-border bg-card text-foreground [&_svg]:fill-[var(--reef-homework-border)]",
 			},
 			multiDayPosition: {
 				first:

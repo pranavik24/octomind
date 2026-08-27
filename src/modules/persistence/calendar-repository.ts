@@ -6,6 +6,8 @@ import type { IEvent, ITask } from "@/modules/components/calendar/interfaces";
 import { expandRecurringEvent } from "@/modules/components/calendar/recurrence";
 import {
 	type BusyInterval,
+	eventFitsWithinSchoolHours,
+	isTaskSchedulable,
 	scheduleTasksResult,
 } from "@/modules/components/calendar/scheduling";
 import {
@@ -134,18 +136,55 @@ async function buildScheduledTasksForUser({
 	const tasks = taskRows
 		.filter((task) => task.id !== omitTaskId)
 		.map((task) => toUiTask(task, user));
-	const inputTasks = nextTask ? [...tasks, nextTask] : tasks;
+	const earliestStart = new Date();
+	const schedulableTasks = tasks.filter((task) =>
+		isTaskSchedulable(task, earliestStart),
+	);
+	const inputTasks = nextTask
+		? [...schedulableTasks, nextTask]
+		: schedulableTasks;
 	const result = scheduleTasksResult({
 		tasks: inputTasks,
 		busyIntervals: toBusyIntervals(events),
-		earliestStart: new Date(),
+		earliestStart,
+		timezone: user.timezone ?? undefined,
 	});
 
 	if (result.status === "failed") {
-		throw new SchedulingError();
+		throw new SchedulingError(result.message, result.reason);
 	}
 
 	return result.tasks;
+}
+
+async function buildScheduledTasksForEventWrite({
+	userId,
+	nextEvents,
+	eventOccurrences,
+	existingEvents,
+}: {
+	userId: string;
+	nextEvents: IEvent[];
+	eventOccurrences: IEvent[];
+	existingEvents: IEvent[];
+}): Promise<ITask[] | null> {
+	try {
+		return await buildScheduledTasksForUser({ userId, nextEvents });
+	} catch (error) {
+		if (
+			error instanceof SchedulingError &&
+			error.reason === "INSUFFICIENT_CAPACITY" &&
+			eventOccurrences.some((occurrence) =>
+				eventFitsWithinSchoolHours(occurrence, existingEvents),
+			)
+		) {
+			// Persisting a user event inside school hours must not be blocked by a
+			// best-effort re-plan. Existing homework blocks remain unchanged, and
+			// school remains protected for all future task scheduling.
+			return null;
+		}
+		throw error;
+	}
 }
 
 export async function createEventForUser(userId: string, event: IEvent) {
@@ -158,9 +197,11 @@ export async function createEventForUser(userId: string, event: IEvent) {
 		await prisma.event.findMany({ where: { userId } })
 	).map((row) => toUiEvent(row, user));
 	const nextEvents = [...existingEvents, ...eventSeries];
-	const scheduledTasks = await buildScheduledTasksForUser({
+	const scheduledTasks = await buildScheduledTasksForEventWrite({
 		userId,
 		nextEvents,
+		eventOccurrences: eventSeries,
+		existingEvents,
 	});
 
 	await prisma.$transaction(async (tx) => {
@@ -179,7 +220,7 @@ export async function createEventForUser(userId: string, event: IEvent) {
 				};
 			}),
 		});
-		await replaceTaskBlocks(tx, userId, scheduledTasks);
+		if (scheduledTasks) await replaceTaskBlocks(tx, userId, scheduledTasks);
 	});
 
 	return eventSeries;
@@ -199,9 +240,11 @@ export async function updateEventForUser(
 	const nextEvents = existingEvents.map((existing) =>
 		existing.id === eventId ? { ...event, id: eventId } : existing,
 	);
-	const scheduledTasks = await buildScheduledTasksForUser({
+	const scheduledTasks = await buildScheduledTasksForEventWrite({
 		userId,
 		nextEvents,
+		eventOccurrences: [{ ...event, id: eventId }],
+		existingEvents: existingEvents.filter((existing) => existing.id !== eventId),
 	});
 
 	await prisma.$transaction(async (tx) => {
@@ -218,7 +261,7 @@ export async function updateEventForUser(
 			},
 		});
 		if (result.count !== 1) throw new NotFoundError("Event not found.");
-		await replaceTaskBlocks(tx, userId, scheduledTasks);
+		if (scheduledTasks) await replaceTaskBlocks(tx, userId, scheduledTasks);
 	});
 
 	return {

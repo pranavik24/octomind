@@ -15,4 +15,9 @@ describe("basic Google authentication", () => {
 		assert.doesNotMatch(source, /access_type/);
 		assert.doesNotMatch(source, /prompt:\s*"consent"/);
 	});
+
+	it("keeps the authenticated user ID available for JWT sessions", () => {
+		assert.match(source, /session\(\{ session, user, token \}\)/);
+		assert.match(source, /const userId = user\?\.id \?\? token\.sub/);
+	});
 });

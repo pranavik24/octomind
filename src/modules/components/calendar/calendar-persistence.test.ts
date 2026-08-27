@@ -92,4 +92,17 @@ describe("calendar persistence client", () => {
 			/Record not found/,
 		);
 	});
+
+	it("includes the HTTP status when a server returns a non-JSON failure", async () => {
+		const failingFetch = async () =>
+			new Response("Internal Server Error", {
+				status: 500,
+				headers: { "Content-Type": "text/html" },
+			});
+
+		await assert.rejects(
+			createPersistedTask(task, failingFetch),
+			/Calendar persistence failed \(HTTP 500\)/,
+		);
+	});
 });

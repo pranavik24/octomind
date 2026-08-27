@@ -19,7 +19,7 @@ const dateStringSchema = z
 		message: "Invalid date.",
 	});
 
-export const eventPayloadSchema = z.object({
+const eventFieldsSchema = z.object({
 	id: z.string().optional(),
 	taskId: z.string().optional(),
 	startDate: dateStringSchema,
@@ -41,12 +41,27 @@ export const eventPayloadSchema = z.object({
 		.optional(),
 });
 
-export const eventCreatePayloadSchema = eventPayloadSchema.omit({
-	id: true,
-	taskId: true,
-});
+const validateEventInterval = (
+	value: { startDate: string; endDate: string },
+	context: z.RefinementCtx,
+) => {
+	if (new Date(value.endDate) <= new Date(value.startDate)) {
+		context.addIssue({
+			code: z.ZodIssueCode.custom,
+			path: ["endDate"],
+			message: "End date and time must be after the start date and time.",
+		});
+	}
+};
 
-export const taskPayloadSchema = z.object({
+export const eventPayloadSchema = eventFieldsSchema.superRefine(validateEventInterval);
+export const eventSchema = eventPayloadSchema;
+
+export const eventCreatePayloadSchema = eventFieldsSchema
+	.omit({ id: true, taskId: true })
+	.superRefine(validateEventInterval);
+
+const taskFieldsSchema = z.object({
 	id: z.string().optional(),
 	dueDate: dateStringSchema,
 	estimatedHours: z.number().min(0.5).max(12).optional(),
@@ -64,6 +79,38 @@ export const taskPayloadSchema = z.object({
 	user: userSchema.optional(),
 });
 
-export const taskCreatePayloadSchema = taskPayloadSchema.omit({ id: true });
+const validateTaskBlocks = (
+	value: { scheduledBlocks?: Array<{ startDate: string; endDate: string }> },
+	context: z.RefinementCtx,
+) => {
+	for (const [index, block] of (value.scheduledBlocks ?? []).entries()) {
+		if (new Date(block.endDate) <= new Date(block.startDate)) {
+			context.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["scheduledBlocks", index, "endDate"],
+				message: "Block end must be after block start.",
+			});
+		}
+	}
+};
+
+export const taskPayloadSchema = taskFieldsSchema.superRefine(validateTaskBlocks);
+export const taskCreatePayloadSchema = taskFieldsSchema
+	.omit({ id: true })
+	.superRefine(validateTaskBlocks);
+
+export const taskSchema = z.object({
+	title: z.string().trim().min(1, "Please enter a task name"),
+	description: z.string().max(4000).default(""),
+	dueDate: z.date({ required_error: "Please choose a due date and time" }),
+	estimatedHours: z.number().min(0.5).max(8).optional(),
+	color: z.enum(
+		["School", "Homework", "Studying", "Extracurriculars", "Work", "Other"],
+		{ required_error: "Please choose a category" },
+	),
+});
+
+export type TEventFormData = z.infer<typeof eventSchema>;
+export type TTaskFormData = z.infer<typeof taskSchema>;
 
 export const routeIdSchema = z.string().uuid("Invalid route ID.");

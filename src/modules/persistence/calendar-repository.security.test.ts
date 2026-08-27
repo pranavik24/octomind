@@ -106,6 +106,44 @@ describe("repository ownership enforcement", () => {
 });
 
 describe("repository transactional scheduling", () => {
+	it("does not let a past-due active task block a new task", async () => {
+		database.task.findMany = async () =>
+			[
+				{
+					id: "past-due-task",
+					title: "Old essay",
+					description: "",
+					color: "Homework",
+					dueAt: new Date("2000-01-01T00:00:00.000Z"),
+					estimatedMinutes: 60,
+					blocks: [],
+				},
+			] as never;
+
+		let createdId: string | undefined;
+		database.$transaction = async (
+			operation: (tx: unknown) => Promise<void>,
+		) => {
+			transactionCalls += 1;
+			await operation({
+				task: {
+					create: async ({ data }: { data: { id: string } }) => {
+						createdId = data.id;
+					},
+				},
+				taskBlock: {
+					deleteMany: async () => ({ count: 0 }),
+					createMany: async () => ({ count: 1 }),
+				},
+			});
+		};
+
+		const createdTask = await createTaskForUser(userId, task);
+
+		assert.equal(transactionCalls, 1);
+		assert.equal(createdTask.id, createdId);
+	});
+
 	it("discards a supplied task UUID and never performs an ID-only upsert", async () => {
 		let createdId: string | undefined;
 		let upsertCalls = 0;

@@ -18,7 +18,7 @@ export function TodayButton() {
 	return (
 		<MotionButton
 			variant="outline"
-			className="flex h-14 w-14 flex-col items-center justify-center p-0 text-center"
+			className="flex h-11 w-11 overflow-hidden border-border bg-card p-0 text-center text-foreground hover:bg-accent"
 			onClick={handleClick}
 			variants={buttonHover}
 			whileHover="hover"

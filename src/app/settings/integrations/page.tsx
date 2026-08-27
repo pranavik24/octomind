@@ -15,7 +15,7 @@ export default async function IntegrationsSettingsPage() {
 		redirect("/onboarding");
 
 	return (
-		<main className="min-h-screen bg-slate-50 px-4 py-8 md:px-6">
+		<main className="ocean-page min-h-screen px-4 py-8 md:px-6">
 			<div className="mx-auto w-full max-w-4xl">
 				<Button variant="ghost" asChild className="mb-5">
 					<Link href="/calendar">
@@ -24,21 +24,21 @@ export default async function IntegrationsSettingsPage() {
 					</Link>
 				</Button>
 				<header className="mb-6 flex items-center gap-3">
-					<div className="flex size-10 items-center justify-center rounded-lg bg-slate-950 text-white">
+					<div className="flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
 						<Plug className="size-5" />
 					</div>
 					<div>
-						<h1 className="text-2xl font-semibold text-slate-950">
+						<h1 className="text-2xl font-semibold text-foreground">
 							Integrations
 						</h1>
-						<p className="text-sm text-slate-600">
+						<p className="text-sm text-muted-foreground">
 							Manage services connected to Octomind.
 						</p>
 					</div>
 				</header>
 				<Suspense
 					fallback={
-						<div className="h-64 animate-pulse rounded-lg border border-slate-200 bg-white" />
+						<div className="tide-panel h-64 animate-pulse rounded-lg border" />
 					}
 				>
 					<ClassroomIntegrationCard />

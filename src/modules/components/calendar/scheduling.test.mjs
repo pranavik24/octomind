@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { scheduleTasksResult } from "./scheduling.ts";
+import { isTaskSchedulable, scheduleTasksResult } from "./scheduling.ts";
 
 const task = (id, dueDate, estimatedHours = 1) => ({
 	id,
@@ -119,5 +119,18 @@ describe("scheduleTasks", () => {
 		assert.equal(result.reason, "INVALID_DUE_DATE");
 		assert.equal(result.taskId, "9");
 		assert.deepEqual(inputTasks, [task("9", "not-a-date", 1)]);
+	});
+
+	it("does not treat a past-due task as schedulable work for a new deadline", () => {
+		const now = "2026-06-18T12:00:00.000Z";
+
+		assert.equal(
+			isTaskSchedulable(task("old", "2026-06-17T17:00:00.000Z"), now),
+			false,
+		);
+		assert.equal(
+			isTaskSchedulable(task("new", "2026-06-25T17:00:00.000Z"), now),
+			true,
+		);
 	});
 });

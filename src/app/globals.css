@@ -53,37 +53,66 @@
 
 :root {
 	--radius: 0.625rem;
-	--background: oklch(1 0 0);
-	--foreground: oklch(0.13 0.028 261.692);
-	--card: oklch(1 0 0);
-	--card-foreground: oklch(0.13 0.028 261.692);
-	--popover: oklch(1 0 0);
-	--popover-foreground: oklch(0.13 0.028 261.692);
-	--primary: oklch(0.21 0.034 264.665);
-	--primary-foreground: oklch(0.985 0.002 247.839);
-	--secondary: oklch(0.967 0.003 264.542);
-	--secondary-foreground: oklch(0.21 0.034 264.665);
-	--muted: oklch(0.967 0.003 264.542);
-	--muted-foreground: oklch(0.551 0.027 264.364);
-	--accent: oklch(0.967 0.003 264.542);
-	--accent-foreground: oklch(0.21 0.034 264.665);
-	--destructive: oklch(0.577 0.245 27.325);
-	--border: oklch(0.928 0.006 264.531);
-	--input: oklch(0.928 0.006 264.531);
-	--ring: oklch(0.707 0.022 261.325);
-	--chart-1: oklch(0.646 0.222 41.116);
-	--chart-2: oklch(0.6 0.118 184.704);
-	--chart-3: oklch(0.398 0.07 227.392);
-	--chart-4: oklch(0.828 0.189 84.429);
-	--chart-5: oklch(0.769 0.188 70.08);
-	--sidebar: oklch(0.985 0.002 247.839);
-	--sidebar-foreground: oklch(0.13 0.028 261.692);
-	--sidebar-primary: oklch(0.21 0.034 264.665);
-	--sidebar-primary-foreground: oklch(0.985 0.002 247.839);
-	--sidebar-accent: oklch(0.967 0.003 264.542);
-	--sidebar-accent-foreground: oklch(0.21 0.034 264.665);
-	--sidebar-border: oklch(0.928 0.006 264.531);
-	--sidebar-ring: oklch(0.707 0.022 261.325);
+	--background: #fff8df;
+	--foreground: #0d2e92;
+	--card: #fffff7;
+	--card-foreground: #0d2e92;
+	--popover: #fffff7;
+	--popover-foreground: #0d2e92;
+	--primary: #0d2e92;
+	--primary-foreground: #fff8df;
+	--secondary: #c0ecb8;
+	--secondary-foreground: #0d2e92;
+	--muted: #e8f6d9;
+	--muted-foreground: #0f5d6d;
+	--accent: #4abbbd;
+	--accent-foreground: #0d2e92;
+	--destructive: oklch(0.57 0.16 25);
+	--border: #9ed9ca;
+	--input: #9ed9ca;
+	--ring: #4684e5;
+	--chart-1: #0d2e92;
+	--chart-2: #1e80a0;
+	--chart-3: #4684e5;
+	--chart-4: #4abbbd;
+	--chart-5: #c0ecb8;
+	--sidebar: #e8f6d9;
+	--sidebar-foreground: #0d2e92;
+	--sidebar-primary: #0d2e92;
+	--sidebar-primary-foreground: #fff8df;
+	--sidebar-accent: #4abbbd;
+	--sidebar-accent-foreground: #0d2e92;
+	--sidebar-border: #9ed9ca;
+	--sidebar-ring: #4684e5;
+	--coast-canvas: #fff8df;
+	--coast-surface: #e8f6d9;
+	--coast-surface-strong: #c0ecb8;
+	--coast-line: #9ed9ca;
+	--coast-ink: #0d2e92;
+	--coast-ink-soft: #0f5d6d;
+	--coast-teal: #1e80a0;
+	--coast-teal-soft: #4abbbd;
+	--coast-blue: #4684e5;
+	--coast-shadow: rgb(13 46 146 / 10%);
+	--coast-drop-target: rgb(74 187 189 / 28%);
+	--reef-school-bg: oklch(0.91 0.055 235);
+	--reef-school-border: oklch(0.78 0.08 235);
+	--reef-school-text: oklch(0.33 0.085 235);
+	--reef-homework-bg: oklch(0.92 0.067 16);
+	--reef-homework-border: oklch(0.79 0.105 16);
+	--reef-homework-text: oklch(0.37 0.105 16);
+	--reef-studying-bg: oklch(0.91 0.059 305);
+	--reef-studying-border: oklch(0.78 0.085 305);
+	--reef-studying-text: oklch(0.35 0.09 305);
+	--reef-extracurriculars-bg: oklch(0.91 0.065 145);
+	--reef-extracurriculars-border: oklch(0.77 0.1 145);
+	--reef-extracurriculars-text: oklch(0.32 0.085 145);
+	--reef-work-bg: oklch(0.92 0.085 76);
+	--reef-work-border: oklch(0.8 0.12 76);
+	--reef-work-text: oklch(0.35 0.09 68);
+	--reef-other-bg: oklch(0.93 0.012 205);
+	--reef-other-border: oklch(0.78 0.025 205);
+	--reef-other-text: oklch(0.34 0.035 214);
 }
 
 .dark {
@@ -126,55 +155,187 @@
 	}
 	body {
 		@apply bg-background text-foreground;
+		font-kerning: normal;
+		text-rendering: optimizeLegibility;
 	}
 }
 
-/* Add these styles to your global CSS */
-.drop-target {
-	position: relative;
+@layer components {
+	.landing-page {
+		min-height: 100dvh;
+		isolation: isolate;
+	}
+
+	.landing-water-image,
+	.landing-water-canvas,
+	.landing-water-scrim {
+		position: fixed;
+		pointer-events: none;
+	}
+
+	.landing-water-image {
+		inset: -5%;
+		z-index: 0;
+		background-position: center;
+		background-size: cover;
+		background-repeat: no-repeat;
+		transform-origin: center;
+		will-change: transform;
+	}
+
+	.landing-water-canvas {
+		inset: 0;
+		z-index: 0;
+		display: block;
+		height: 100%;
+		width: 100%;
+	}
+
+	.landing-water-scrim {
+		inset: 0;
+		z-index: 0;
+		background:
+			linear-gradient(118deg, rgb(243 253 250 / 58%) 0%, rgb(241 252 249 / 22%) 48%, rgb(225 247 242 / 12%) 100%),
+			rgb(234 247 243 / 18%);
+	}
+
+	.dark .landing-water-scrim {
+		background:
+			linear-gradient(118deg, rgb(7 37 42 / 68%) 0%, rgb(8 48 53 / 40%) 48%, rgb(8 37 42 / 35%) 100%),
+			rgb(8 37 42 / 36%);
+	}
+
+	.ocean-page {
+		background: var(--coast-canvas);
+	}
+
+	.ocean-shell {
+		background: var(--card);
+		border-color: var(--coast-line);
+		box-shadow: 0 8px 24px var(--coast-shadow);
+	}
+
+	.tide-panel {
+		background: var(--coast-surface);
+		border-color: var(--coast-line);
+	}
+
+	.reef-chip {
+		border-color: var(--reef-other-border);
+		background: var(--reef-other-bg);
+		color: var(--reef-other-text);
+	}
+
+	.reef-chip:hover {
+		filter: saturate(1.08) brightness(0.99);
+	}
+
+	.reef-dot {
+		background: var(--reef-other-border);
+	}
+
+	.reef-avatar {
+		background: var(--reef-other-border);
+		color: var(--reef-other-text);
+	}
+
+	.reef-school {
+		border-color: var(--reef-school-border);
+		background: var(--reef-school-bg);
+		color: var(--reef-school-text);
+	}
+
+	.reef-homework {
+		border-color: var(--reef-homework-border);
+		background: var(--reef-homework-bg);
+		color: var(--reef-homework-text);
+	}
+
+	.reef-studying {
+		border-color: var(--reef-studying-border);
+		background: var(--reef-studying-bg);
+		color: var(--reef-studying-text);
+	}
+
+	.reef-extracurriculars {
+		border-color: var(--reef-extracurriculars-border);
+		background: var(--reef-extracurriculars-bg);
+		color: var(--reef-extracurriculars-text);
+	}
+
+	.reef-work {
+		border-color: var(--reef-work-border);
+		background: var(--reef-work-bg);
+		color: var(--reef-work-text);
+	}
+
+	.reef-other {
+		border-color: var(--reef-other-border);
+		background: var(--reef-other-bg);
+		color: var(--reef-other-text);
+	}
+
+	.reef-dot-school {
+		background: var(--reef-school-border);
+	}
+
+	.reef-dot-homework {
+		background: var(--reef-homework-border);
+	}
+
+	.reef-dot-studying {
+		background: var(--reef-studying-border);
+	}
+
+	.reef-dot-extracurriculars {
+		background: var(--reef-extracurriculars-border);
+	}
+
+	.reef-dot-work {
+		background: var(--reef-work-border);
+	}
+
+	.reef-dot-other {
+		background: var(--reef-other-border);
+	}
+
+	.drop-target {
+		position: relative;
+	}
+
+	.drop-target::after {
+		content: "";
+		position: absolute;
+		inset: 3px;
+		background-color: var(--coast-drop-target);
+		border: 1px dashed var(--coast-teal);
+		border-radius: 0.5rem;
+		pointer-events: none;
+		z-index: 10;
+		opacity: 0;
+		transition: opacity 0.2s ease;
+	}
+
+	.drop-target.bg-primary\/10::after {
+		opacity: 1;
+	}
+
+	[draggable="true"] {
+		cursor: grab;
+	}
+
+	[draggable="true"]:active {
+		cursor: grabbing;
+	}
 }
 
-.drop-target::after {
-	content: "";
-	position: absolute;
-	inset: 0;
-	background-color: rgba(var(--primary), 0.05);
-	border: 2px dashed rgba(var(--primary), 0.3);
-	pointer-events: none;
-	z-index: 10;
-	opacity: 0;
-	transition: opacity 0.2s ease;
-}
-
-.drop-target.bg-primary\/10::after {
-	opacity: 1;
-}
-
-/* Add a dragging cursor */
-[draggable="true"] {
-	cursor: grab;
-}
-
-[draggable="true"]:active {
-	cursor: grabbing;
-}
-
-.drop-target {
-	position: relative;
-}
-
-.drop-target::after {
-	content: "";
-	position: absolute;
-	inset: 0;
-	background-color: rgba(var(--primary), 0.05);
-	border: 2px dashed rgba(var(--primary), 0.3);
-	pointer-events: none;
-	z-index: 10;
-	opacity: 0;
-	transition: opacity 0.2s ease;
-}
-
-.drop-target.bg-primary\/10::after {
-	opacity: 1;
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		scroll-behavior: auto !important;
+		transition-duration: 0.01ms !important;
+	}
 }

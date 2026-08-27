@@ -40,8 +40,8 @@ function DayPicker({
 				row: "flex w-full mt-2",
 
 				cell: cn(
-					"size-9 flex items-center justify-center text-t-secondary text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
-					"[&:has([aria-selected].day-range-end)]:rounded-r-lg last:[&:has([aria-selected])]:rounded-r-lg first:[&:has([aria-selected])]:rounded-l-lg [&:has([aria-selected])]:bg-bg-secondary",
+					"size-9 flex items-center justify-center text-muted-foreground text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
+					"[&:has([aria-selected].day-range-end)]:rounded-r-lg last:[&:has([aria-selected])]:rounded-r-lg first:[&:has([aria-selected])]:rounded-l-lg [&:has([aria-selected])]:bg-secondary",
 				),
 				day: cn(
 					buttonVariants({ variant: "ghost" }),
@@ -52,7 +52,7 @@ function DayPicker({
 				day_today: "text-red-600",
 				day_outside: "opacity-50 aria-selected:opacity-40",
 				day_range_middle:
-					"aria-selected:bg-bg-secondary aria-selected:text-t-primary",
+					"aria-selected:bg-secondary aria-selected:text-foreground",
 				day_hidden: "invisible",
 				...classNames,
 			}}

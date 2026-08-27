@@ -39,8 +39,13 @@ export function CalendarMonthView({ singleDayEvents, multiDayEvents }: IProps) {
 	);
 
 	return (
-		<motion.div initial="initial" animate="animate" variants={staggerContainer}>
-			<div className="grid grid-cols-7">
+		<motion.div
+			initial="initial"
+			animate="animate"
+			variants={staggerContainer}
+			className="min-h-full"
+		>
+			<div className="grid shrink-0 grid-cols-7 border-b border-border bg-secondary/70">
 				{WEEK_DAYS.map((day, index) => (
 					<motion.div
 						key={day}
@@ -49,15 +54,17 @@ export function CalendarMonthView({ singleDayEvents, multiDayEvents }: IProps) {
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ delay: index * 0.05, ...transition }}
 					>
-						<span className="text-xs font-medium text-t-quaternary">{day}</span>
+						<span className="text-xs font-semibold text-muted-foreground">
+							{day}
+						</span>
 					</motion.div>
 				))}
 			</div>
 
-			<div className="grid grid-cols-7 overflow-hidden">
-				{cells.map((cell, index) => (
+			<div className="grid grid-cols-7 overflow-hidden bg-card">
+				{cells.map((cell) => (
 					<DayCell
-						key={index}
+						key={cell.date.toISOString()}
 						cell={cell}
 						events={allEvents}
 						eventPositions={eventPositions}

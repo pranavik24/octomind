@@ -84,4 +84,21 @@ describe("calendar API errors", () => {
 			error: { code: "internal_error", message: "Something went wrong." },
 		});
 	});
+
+	it("returns an actionable but sanitized response when the database is unavailable", async () => {
+		const databaseError = Object.assign(
+			new Error("connection details must remain private"),
+			{ code: "P1001", name: "PrismaClientInitializationError" },
+		);
+		const response = apiError(databaseError);
+
+		assert.equal(response.status, 503);
+		assert.deepEqual(await response.json(), {
+			error: {
+				code: "service_unavailable",
+				message:
+					"Calendar storage is unavailable. Check the Supabase database connection.",
+			},
+		});
+	});
 });

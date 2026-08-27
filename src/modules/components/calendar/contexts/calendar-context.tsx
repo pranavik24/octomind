@@ -19,11 +19,13 @@ import type {
 import { expandRecurringEvent } from "@/modules/components/calendar/recurrence";
 import {
 	type BusyInterval,
+	isTaskSchedulable,
 	normalizeTaskDurationHours,
 	type ScheduledBlock,
 	scheduleTasksResult,
 	TaskSchedulingError,
 	type TaskSchedulingFailure,
+	eventFitsWithinSchoolHours,
 } from "@/modules/components/calendar/scheduling";
 import type {
 	TCalendarView,
@@ -34,8 +36,6 @@ interface ICalendarContext {
 	selectedDate: Date;
 	view: TCalendarView;
 	setView: (view: TCalendarView) => void;
-	agendaModeGroupBy: "date" | "color";
-	setAgendaModeGroupBy: (groupBy: "date" | "color") => void;
 	use24HourFormat: boolean;
 	toggleTimeFormat: () => void;
 	setSelectedDate: (date: Date | undefined) => void;
@@ -61,16 +61,14 @@ interface ICalendarContext {
 
 interface CalendarSettings {
 	badgeVariant: "dot" | "colored";
-	view: TCalendarView;
+	view: TCalendarView | "agenda";
 	use24HourFormat: boolean;
-	agendaModeGroupBy: "date" | "color";
 }
 
 const DEFAULT_SETTINGS: CalendarSettings = {
 	badgeVariant: "colored",
 	view: "day",
-	use24HourFormat: true,
-	agendaModeGroupBy: "date",
+	use24HourFormat: false,
 };
 
 const CalendarContext = createContext({} as ICalendarContext);
@@ -82,6 +80,9 @@ const buildBusyIntervals = (events: IEvent[]): BusyInterval[] =>
 	}));
 
 const currentSchedulingStart = () => new Date();
+
+const deferredTaskMessage =
+	"This task is past due or has an invalid due date. Update the deadline to schedule it.";
 
 const coalesceTouchingBlocks = (blocks: ScheduledBlock[]): ScheduledBlock[] => {
 	const sortedBlocks = [...blocks].sort(
@@ -146,28 +147,98 @@ const applySchedulingFailure = (
 };
 
 const scheduleCalendarTasks = (tasks: ITask[], events: IEvent[]): ITask[] => {
+	const earliestStart = currentSchedulingStart();
+	const schedulableTasks = tasks.filter((task) =>
+		isTaskSchedulable(task, earliestStart),
+	);
 	const result = scheduleTasksResult({
-		tasks,
+		tasks: schedulableTasks,
 		busyIntervals: buildBusyIntervals(events),
-		earliestStart: currentSchedulingStart(),
+		earliestStart,
 	});
 
-	if (result.status === "scheduled") return result.tasks;
+	if (result.status === "scheduled") {
+		const scheduledById = new Map(result.tasks.map((task) => [task.id, task]));
+		return tasks.map(
+			(task) =>
+				scheduledById.get(task.id) ?? {
+					...task,
+					estimatedHours: normalizeTaskDurationHours(task.estimatedHours),
+					scheduledBlocks: [],
+					scheduleStatus: {
+						state: "failed" as const,
+						reason: "SCHEDULING_BLOCKED" as const,
+						message: deferredTaskMessage,
+					},
+				},
+		);
+	}
 	return applySchedulingFailure(tasks, result);
 };
 
 const requireScheduledCalendarTasks = (
 	tasks: ITask[],
 	events: IEvent[],
+	requiredTaskId?: string,
 ): ITask[] => {
+	const earliestStart = currentSchedulingStart();
+	const schedulableTasks = tasks.filter(
+		(task) =>
+			task.id === requiredTaskId || isTaskSchedulable(task, earliestStart),
+	);
 	const result = scheduleTasksResult({
-		tasks,
+		tasks: schedulableTasks,
 		busyIntervals: buildBusyIntervals(events),
-		earliestStart: currentSchedulingStart(),
+		earliestStart,
 	});
 
-	if (result.status === "scheduled") return result.tasks;
+	if (result.status === "scheduled") {
+		const scheduledById = new Map(result.tasks.map((task) => [task.id, task]));
+		return tasks.map(
+			(task) =>
+				scheduledById.get(task.id) ?? {
+					...task,
+					estimatedHours: normalizeTaskDurationHours(task.estimatedHours),
+					scheduledBlocks: [],
+					scheduleStatus: {
+						state: "failed" as const,
+						reason: "SCHEDULING_BLOCKED" as const,
+						message: deferredTaskMessage,
+					},
+				},
+		);
+	}
 	throw new TaskSchedulingError(result);
+};
+
+const scheduleTasksForEventWrite = ({
+	tasks,
+	nextEvents,
+	eventOccurrences,
+	existingEvents,
+}: {
+	tasks: ITask[];
+	nextEvents: IEvent[];
+	eventOccurrences: IEvent[];
+	existingEvents: IEvent[];
+}): ITask[] => {
+	try {
+		return requireScheduledCalendarTasks(tasks, nextEvents);
+	} catch (error) {
+		if (
+			error instanceof TaskSchedulingError &&
+			error.reason === "INSUFFICIENT_CAPACITY" &&
+			eventOccurrences.some((occurrence) =>
+				eventFitsWithinSchoolHours(occurrence, existingEvents),
+			)
+		) {
+			// A user event inside protected school hours does not consume any
+			// homework time that was already available. Keep the current blocks
+			// when re-planning cannot find an equivalent schedule.
+			return tasks;
+		}
+		throw error;
+	}
 };
 
 export function CalendarProvider({
@@ -199,15 +270,18 @@ export function CalendarProvider({
 	const [badgeVariant, setBadgeVariantState] = useState<"dot" | "colored">(
 		settings.badgeVariant,
 	);
-	const [currentView, setCurrentViewState] = useState<TCalendarView>(
-		settings.view,
-	);
+	const initialView: TCalendarView =
+		settings.view === "day" ||
+		settings.view === "week" ||
+		settings.view === "month" ||
+		settings.view === "year"
+			? settings.view
+			: view;
+	const [currentView, setCurrentViewState] =
+		useState<TCalendarView>(initialView);
 	const [use24HourFormat, setUse24HourFormatState] = useState<boolean>(
 		settings.use24HourFormat,
 	);
-	const [agendaModeGroupBy, setAgendaModeGroupByState] = useState<
-		"date" | "color"
-	>(settings.agendaModeGroupBy);
 
 	const [selectedDate, setSelectedDate] = useState(new Date());
 	const [selectedUserId, setSelectedUserId] = useState<IUser["id"] | "all">(
@@ -250,11 +324,6 @@ export function CalendarProvider({
 		updateSettings({ use24HourFormat: newValue });
 	};
 
-	const setAgendaModeGroupBy = (groupBy: "date" | "color") => {
-		setAgendaModeGroupByState(groupBy);
-		updateSettings({ agendaModeGroupBy: groupBy });
-	};
-
 	const filterEventsBySelectedColors = (color: TEventColor) => {
 		const isColorSelected = selectedColors.includes(color);
 		const newColors = isColorSelected
@@ -293,10 +362,12 @@ export function CalendarProvider({
 		const localOccurrences = event.recurrence
 			? expandRecurringEvent(event)
 			: [event];
-		const scheduledTasks = rescheduleAllTasks(allTasks, [
-			...allEvents,
-			...localOccurrences,
-		]);
+		const scheduledTasks = scheduleTasksForEventWrite({
+			tasks: allTasks,
+			nextEvents: [...allEvents, ...localOccurrences],
+			eventOccurrences: localOccurrences,
+			existingEvents: allEvents,
+		});
 		const persistedEvents = persistenceEnabled
 			? await createPersistedEvent(event)
 			: localOccurrences;
@@ -316,7 +387,12 @@ export function CalendarProvider({
 		};
 
 		const nextEvents = allEvents.map((e) => (e.id === event.id ? updated : e));
-		const scheduledTasks = rescheduleAllTasks(allTasks, nextEvents);
+		const scheduledTasks = scheduleTasksForEventWrite({
+			tasks: allTasks,
+			nextEvents,
+			eventOccurrences: [updated],
+			existingEvents: allEvents.filter((item) => item.id !== event.id),
+		});
 		const persistedEvent = persistenceEnabled
 			? await updatePersistedEvent(updated)
 			: updated;
@@ -345,8 +421,13 @@ export function CalendarProvider({
 	const rescheduleAllTasks = (
 		inputTasks: ITask[],
 		inputEvents = allEvents,
+		requiredTaskId?: string,
 	): ITask[] => {
-		return requireScheduledCalendarTasks(inputTasks, inputEvents);
+		return requireScheduledCalendarTasks(
+			inputTasks,
+			inputEvents,
+			requiredTaskId,
+		);
 	};
 
 	const addTask = async (task: ITask) => {
@@ -355,7 +436,11 @@ export function CalendarProvider({
 			dueDate: new Date(task.dueDate).toISOString(),
 			estimatedHours: normalizeTaskDurationHours(task.estimatedHours),
 		};
-		const scheduled = rescheduleAllTasks([...allTasks, taskToAdd]);
+		const scheduled = rescheduleAllTasks(
+			[...allTasks, taskToAdd],
+			allEvents,
+			taskToAdd.id,
+		);
 		const persistedTask = persistenceEnabled
 			? await createPersistedTask(taskToAdd)
 			: scheduled.find((item) => item.id === taskToAdd.id);
@@ -375,7 +460,7 @@ export function CalendarProvider({
 			estimatedHours: normalizeTaskDurationHours(task.estimatedHours),
 		};
 		const nextTasks = allTasks.map((t) => (t.id === task.id ? updatedTask : t));
-		const scheduled = rescheduleAllTasks(nextTasks);
+		const scheduled = rescheduleAllTasks(nextTasks, allEvents, task.id);
 		const persistedTask = persistenceEnabled
 			? await updatePersistedTask(updatedTask)
 			: scheduled.find((item) => item.id === task.id);
@@ -442,8 +527,6 @@ export function CalendarProvider({
 		use24HourFormat,
 		toggleTimeFormat,
 		setView,
-		agendaModeGroupBy,
-		setAgendaModeGroupBy,
 		addEvent,
 		updateEvent,
 		removeEvent,

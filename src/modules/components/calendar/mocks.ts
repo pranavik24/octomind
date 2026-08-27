@@ -115,7 +115,7 @@ const events = [
 	"Home renovation meeting",
 ];
 
-const mockGenerator = (numberOfEvents: number): IEvent[] => {
+export const mockGenerator = (numberOfEvents: number): IEvent[] => {
 	const result: IEvent[] = [];
 	let currentId = 1;
 

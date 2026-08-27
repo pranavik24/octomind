@@ -12,7 +12,7 @@ export default async function OnboardingPage() {
 	if (await onboardingCompletedForUser(userId)) redirect("/calendar");
 
 	return (
-		<main className="min-h-screen bg-slate-50 px-4 py-8 md:px-6">
+		<main className="ocean-page min-h-screen px-4 py-8 md:px-6">
 			<div className="mx-auto w-full max-w-3xl">
 				<header className="mb-7 flex items-center gap-3">
 					<Image
@@ -24,10 +24,10 @@ export default async function OnboardingPage() {
 						priority
 					/>
 					<div>
-						<h1 className="text-2xl font-semibold text-slate-950">
+						<h1 className="text-2xl font-semibold text-foreground">
 							Set up your week
 						</h1>
-						<p className="text-sm text-slate-600">
+						<p className="text-sm text-muted-foreground">
 							We will protect school and sleep before scheduling tasks.
 						</p>
 					</div>

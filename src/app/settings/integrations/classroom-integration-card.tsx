@@ -155,11 +155,11 @@ export function ClassroomIntegrationCard() {
 	const isLoading = state === null;
 
 	return (
-		<section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+		<section className="ocean-shell rounded-xl border p-5">
 			<div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
 				<div className="min-w-0">
 					<div className="flex flex-wrap items-center gap-2">
-						<h2 className="text-lg font-semibold text-slate-950">
+						<h2 className="text-lg font-semibold text-foreground">
 							Google Classroom
 						</h2>
 						{isLoading ? (
@@ -172,7 +172,7 @@ export function ClassroomIntegrationCard() {
 							<Badge variant="outline">Not connected</Badge>
 						)}
 					</div>
-					<p className="mt-1 max-w-2xl text-sm text-slate-600">
+					<p className="mt-1 max-w-2xl text-sm text-muted-foreground">
 						Import published coursework with due dates into your task schedule.
 					</p>
 				</div>
@@ -214,10 +214,10 @@ export function ClassroomIntegrationCard() {
 				</div>
 			</div>
 
-			<div className="mt-5 grid gap-3 border-t border-slate-200 pt-4 text-sm sm:grid-cols-2">
+			<div className="mt-5 grid gap-3 border-t border-border pt-4 text-sm sm:grid-cols-2">
 				<div>
-					<p className="font-medium text-slate-900">Connection health</p>
-					<p className="mt-1 flex items-center gap-2 text-slate-600">
+					<p className="font-medium text-foreground">Connection health</p>
+					<p className="mt-1 flex items-center gap-2 text-muted-foreground">
 						{healthy ? (
 							<CheckCircle2 className="size-4 text-emerald-600" />
 						) : (
@@ -233,8 +233,8 @@ export function ClassroomIntegrationCard() {
 					</p>
 				</div>
 				<div>
-					<p className="font-medium text-slate-900">Last sync</p>
-					<p className="mt-1 text-slate-600">
+					<p className="font-medium text-foreground">Last sync</p>
+					<p className="mt-1 text-muted-foreground">
 						{isLoading
 							? "Checking..."
 							: formatTimestamp(state?.connection?.lastSyncedAt)}
@@ -254,7 +254,7 @@ export function ClassroomIntegrationCard() {
 					{error ?? state?.connection?.lastError}
 				</p>
 			) : null}
-			<p className="mt-4 border-t border-slate-200 pt-4 text-sm text-slate-600">
+			<p className="mt-4 border-t border-border pt-4 text-sm text-muted-foreground">
 				Google Classroom import is currently in beta. You can still use the
 				scheduler by manually adding tasks.
 			</p>

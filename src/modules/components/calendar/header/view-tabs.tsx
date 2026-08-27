@@ -1,25 +1,10 @@
-import { motion, AnimatePresence } from "motion/react";
-
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-import { cn } from "@/lib/utils";
 import { useCalendar } from "../contexts/calendar-context";
-import {
-  CalendarRange,
-  List,
-  Columns,
-  Grid3X3,
-  Grid2X2,
-} from "lucide-react";
+import { Columns, Grid2X2, Grid3X3, List } from "lucide-react";
 import { TCalendarView } from "../types";
 import { memo } from "react";
 
 const tabs = [
-  {
-    name: "Today's Agenda",
-    value: "agenda",
-    icon: () => <CalendarRange className="h-4 w-4" />,
-  },
   {
     name: "Day",
     value: "day",
@@ -49,57 +34,19 @@ function Views() {
     <Tabs
       value={view}
       onValueChange={(value) => setView(value as TCalendarView)}
-      className="gap-4 sm:w-auto w-full"
+      className="w-full gap-2 sm:w-auto"
     >
-      <TabsList className="h-auto gap-2 rounded-xl p-1 w-full">
-        {tabs.map(({ icon: Icon, name, value }) => {
-          const isActive = view === value;
-
-          return (
-            <motion.div
-              key={value}
-              layout
-              className={cn(
-                "flex h-8 items-center justify-center overflow-hidden rounded-md",
-                isActive ? "flex-1" : "flex-none"
-              )}
-              onClick={() => setView(value as TCalendarView)}
-              initial={false}
-              animate={{
-                width: isActive ? (value === "agenda" ? 170 : 120) : 32,
-              }}
-              transition={{
-                type: "tween",
-                stiffness: 400,
-                damping: 25,
-              }}
-            >
-              <TabsTrigger value={value} asChild>
-                <motion.div
-                  className="flex h-8 w-full items-center justify-center cursor-pointer"
-                  animate={{ filter: "blur(0px)" }}
-                  exit={{ filter: "blur(2px)" }}
-                  transition={{ duration: 0.25, ease: "easeOut" }}
-                >
-                  <Icon />
-                  <AnimatePresence initial={false}>
-                    {isActive && (
-                      <motion.span
-                        className="font-medium"
-                        initial={{ opacity: 0, scaleX: 0.8 }}
-                        animate={{ opacity: 1, scaleX: 1 }}
-                        transition={{ duration: 0.25, ease: "easeOut" }}
-                        style={{ originX: 0 }}
-                      >
-                        {name}
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                </motion.div>
-              </TabsTrigger>
-            </motion.div>
-          );
-        })}
+      <TabsList className="h-auto w-full flex-wrap justify-start gap-1 rounded-xl border-border bg-card/80 p-1 sm:w-auto">
+        {tabs.map(({ icon: Icon, name, value }) => (
+          <TabsTrigger
+            key={value}
+            value={value}
+            className="h-8 flex-none px-2.5"
+          >
+            <Icon />
+            <span>{name}</span>
+          </TabsTrigger>
+        ))}
       </TabsList>
     </Tabs>
   );

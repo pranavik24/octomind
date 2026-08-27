@@ -21,11 +21,17 @@ export default function FilterEvents() {
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Toggle variant="outline" className="cursor-pointer w-fit">
+				<Toggle
+					variant="outline"
+					className="w-fit cursor-pointer border-border bg-card hover:bg-accent"
+					aria-label="Filter calendar by category"
+					title="Filter calendar by category"
+				>
 					<Filter className="h-4 w-4" />
+					<span>Filter</span>
 				</Toggle>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" className="w-[150px]">
+			<DropdownMenuContent align="end" className="w-[180px]">
 				{colors.map((color, index) => (
 					<DropdownMenuItem
 						key={index}
@@ -40,7 +46,7 @@ export default function FilterEvents() {
 							{color}
 							<span>
 								{selectedColors.includes(color) && (
-									<span className="text-blue-500">
+									<span className="text-primary">
 										<CheckIcon className="size-4" />
 									</span>
 								)}
